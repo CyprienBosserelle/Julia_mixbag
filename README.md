@@ -1,2 +1,3 @@
-# Julia_mixbag
-my Julia modules
+# My julia mixbag
+Compilation of my Julia module,
+
