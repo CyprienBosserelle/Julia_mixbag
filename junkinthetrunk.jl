@@ -1,6 +1,6 @@
 module junkinthetrunk
 
-    import StatsBase, NetCDF, Interpolations, Dates, ProgressMeter
+    import StatsBase, NetCDF, Dates
     export nanmean, write2nc, pol2cart, interp1
 
 
@@ -25,6 +25,13 @@ module junkinthetrunk
         y=zeros(length(newx))
         for n=1:length(newx)
             index=findfirst(xA.>newx[n]);
+            if isnothing(index)
+                if newx[n]<=xA[1]
+                    index=1;
+                elseif newx[n]>=xA[end]
+                    index=length(xA)
+                end
+            end
             prev=yA[max(index[1]-1,1)];
             next=yA[index[1]];
 
