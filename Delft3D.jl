@@ -51,16 +51,25 @@ module Delft3D
         return B;
     end
 
-    function Get_curv_grid_XZ(ncfile,var,outname)
+    function Get_curv_grid_XZ(ncfile,var,outname,step,lev)
         #println("This code assumes you have a bathymetry file called trim-2008_TideCorr.nc in your working directory")
         #ncfile="trim-2008_TideCorr.nc" #"D:\\Projects\\Port_Otago\\2008\\D3D\\trim-2008_TideCorr.nc"
         #println("The output file will be called D3dmeshtoplot.gmt in your working directory")
         #outname="D3dmeshtoplot.gmt" #"D:\\Projects\\Port_Otago\\Bathy\\D3dmeshtoplot.gmt"
 
         #var="DPS0"
+        nc=NetCDF.open(ncfile);
 
-        #Get bathy data
-        Z=NetCDF.ncread(ncfile, var, start=[1,1], count = [-1,-1]);
+        sz=size(nc[var]);
+
+        if length(sz)==2
+            #Get bathy data
+            Z=NetCDF.ncread(ncfile, var, start=[1,1], count = [-1,-1]);
+        elseif length(sz)==3
+            Z=NetCDF.ncread(ncfile, var, start=[1,1,step], count = [-1,-1,1]);
+        elseif length(sz)==4
+            Z=NetCDF.ncread(ncfile, var, start=[1,1,lev,step], count = [-1,-1,1,1]);
+        end
 
         #Get X and Y data fo that Variable
         X=NetCDF.ncread(ncfile,"XZ", start=[1,1], count = [-1,-1]);
@@ -88,6 +97,15 @@ module Delft3D
 
         end
     end
+
+    function Get_curv_grid_XZ(ncfile,var,outname)
+        Get_curv_grid_XZ(ncfile,var,outname,1,1);
+    end
+    function Get_curv_grid_XZ(ncfile,var,outname,step)
+        Get_curv_grid_XZ(ncfile,var,outname,step,1);
+    end
+
+
 
 
 
