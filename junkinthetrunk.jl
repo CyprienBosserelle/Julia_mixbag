@@ -1,7 +1,7 @@
 module junkinthetrunk
 
     import StatsBase, NetCDF, Dates
-    export nanmean, write2nc, pol2cart, interp1
+    export nanmean, write2nc, pol2cart, interp1, nearneighb1
 
 
     #nanmean does a mean while ignoring nans
@@ -17,7 +17,7 @@ module junkinthetrunk
 
     interptime(next,prev,timenext,time)=prev + (time) / (timenext)*(next - prev);
 
-    function interp1(xA,yA,newx)
+    function interp1old(xA,yA,newx)
         # Interpolate to time nx even if xA is not monotonic (although it has to be increasing)
         # This is a naive implementation and could do with improvements.
         # This function deals with extrapolation by padding the first/last known value
@@ -40,6 +40,65 @@ module junkinthetrunk
 
 
             y[n]=prev + (time) / (timenext)*(next - prev);
+        end
+        return y;
+    end
+
+    function interp1(xA, yA, newx)
+        # Interpolate to time nx even if xA is not monotonic (although it has to be increasing)
+        # This is a naive implementation and could do with improvements.
+        # This function deals with extrapolation by padding the first/last known value
+        #
+
+        #selcasttimedep[indnonan], error[indnonan], ttt
+
+        #xA=selcasttimedep[indnonan]
+        #yA=error[indnonan]
+        #newx=copy(ttt)
+
+
+        y = zeros(length(newx))
+        for n = 1:length(newx)
+            index = findfirst(xA .> newx[n]);
+            if isnothing(index)
+                if newx[n] <= xA[1]
+                    index = 1;
+                elseif newx[n] >= xA[end]
+                    index = length(xA)+1;
+                end
+            end
+            prev = yA[max(index[1] - 1, 1)];
+            next = yA[min(index[1],length(xA))];
+
+            time = newx[n] - xA[max(index[1] - 1, 1)];
+            timenext = xA[max(min(index[1],length(xA)), 1)] - xA[max(index[1] - 1, 1)];
+
+            if max(min(index[1],length(xA)), 1) == max(index[1] - 1, 1)
+
+                y[n] = yA[max(min(index[1],length(xA)), 1)];
+            else
+                y[n] = prev + (time) / (timenext) * (next - prev);
+
+            end
+        end
+        return y;
+    end
+
+    function nearneighb1(xA,yA,newx,dxmax)
+        # Find the nearest neighbour within and assign value
+        #
+        y = zeros(length(newx));
+        for n = 1:length(newx)
+            minim = minimum(abs.(xA .- newx[n]));
+            minind = argmin(abs.(xA .- newx[n]));
+            if(minim<=dxmax)
+                y[n]=yA[minind];
+            else
+                y[n]=NaN;
+            end
+
+
+
         end
         return y;
     end

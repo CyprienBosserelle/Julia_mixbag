@@ -1,7 +1,7 @@
 module Delft3D
 
-    import Printf, DelimitedFiles
-    export readdep,writedep
+    import Printf, DelimitedFiles, NetCDF
+    export readdep,writedep,Get_curv_grid_XZ
 
     # Function to write md files (next gen?)
     function writedep(z,filename)
@@ -25,6 +25,8 @@ module Delft3D
 
         end
     end
+
+
     function readdep(depfile,nx,ny)
         data=DelimitedFiles.readdlm(depfile);
 
@@ -48,6 +50,45 @@ module Delft3D
         end
         return B;
     end
+
+    function Get_curv_grid_XZ(ncfile,var,outname)
+        #println("This code assumes you have a bathymetry file called trim-2008_TideCorr.nc in your working directory")
+        #ncfile="trim-2008_TideCorr.nc" #"D:\\Projects\\Port_Otago\\2008\\D3D\\trim-2008_TideCorr.nc"
+        #println("The output file will be called D3dmeshtoplot.gmt in your working directory")
+        #outname="D3dmeshtoplot.gmt" #"D:\\Projects\\Port_Otago\\Bathy\\D3dmeshtoplot.gmt"
+
+        #var="DPS0"
+
+        #Get bathy data
+        Z=ncread(ncfile, var, start=[1,1], count = [-1,-1]);
+
+        #Get X and Y data fo that Variable
+        X=ncread(ncfile,"XZ", start=[1,1], count = [-1,-1]);
+        Y=ncread(ncfile,"YZ", start=[1,1], count = [-1,-1]);
+
+        #Get mask info
+        mask=ncread(ncfile,"KCS", start=[1,1], count = [-1,-1]);
+
+        si=size(X);
+        nx=si[1];
+        ny=si[2];
+
+        open(outname,"w") do io
+            for i=1:(nx-1)
+                for j=1:(ny-1)
+                    if (mask[i,j]==1 && mask[i+1,j]==1 && mask[i,j+1]==1 && mask[i+1,j+1]==1)
+                        Printf.@printf(io,">> -Z%f\n",-1.0.*Z[i,j]);
+                        Printf.@printf(io,"%f\t%f\n",X[i,j],Y[i,j]);
+                        Printf.@printf(io,"%f\t%f\n",X[i+1,j],Y[i+1,j]);
+                        Printf.@printf(io,"%f\t%f\n",X[i+1,j+1],Y[i+1,j+1]);
+                        Printf.@printf(io,"%f\t%f\n",X[i,j+1],Y[i,j+1]);
+                    end
+                end
+            end
+
+        end
+    end
+
 
 
 
