@@ -60,14 +60,14 @@ module Delft3D
         #var="DPS0"
 
         #Get bathy data
-        Z=ncread(ncfile, var, start=[1,1], count = [-1,-1]);
+        Z=NetCDF.ncread(ncfile, var, start=[1,1], count = [-1,-1]);
 
         #Get X and Y data fo that Variable
-        X=ncread(ncfile,"XZ", start=[1,1], count = [-1,-1]);
-        Y=ncread(ncfile,"YZ", start=[1,1], count = [-1,-1]);
+        X=NetCDF.ncread(ncfile,"XZ", start=[1,1], count = [-1,-1]);
+        Y=NetCDF.ncread(ncfile,"YZ", start=[1,1], count = [-1,-1]);
 
         #Get mask info
-        mask=ncread(ncfile,"KCS", start=[1,1], count = [-1,-1]);
+        mask=NetCDF.ncread(ncfile,"KCS", start=[1,1], count = [-1,-1]);
 
         si=size(X);
         nx=si[1];
