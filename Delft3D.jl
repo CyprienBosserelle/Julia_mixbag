@@ -1,24 +1,32 @@
 module Delft3D
 
     import Printf, DelimitedFiles, NetCDF
-    export readdep,writedep,Get_curv_grid_XZ
+    export readdep,writedep,Get_curv_grid_XZ,writecurv2gmt
 
     # Function to write md files (next gen?)
     function writedep(z,filename)
         open(filename,"w") do io
             nx,ny=size(z);
-            for jj=1:1:ny
+            for jj=1:ny
                 #Printf.@printf(io,"%d\n",jj);
-                for ii=1:floor(nx/12)
-                    Printf.@printf(io,"%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n",z[Int64((ii-1)*12+1),jj],z[Int64((ii-1)*12+2),jj],z[Int64((ii-1)*12+3),jj],z[Int64((ii-1)*12+4),jj],z[Int64((ii-1)*11+5),jj],z[Int64((ii-1)*12+6),jj],z[Int64((ii-1)*12+7),jj],z[Int64((ii-1)*12+8),jj],z[Int64((ii-1)*12+9),jj],z[Int64((ii-1)*12+10),jj],z[Int64((ii-1)*12+11),jj],z[Int64((ii-1)*12+12),jj]);
-                end
-
-
-                if mod(nx,12)!=0
-                    for ii=(floor(nx/12)*12+1):(floor(nx/12)*12+(nx/12-floor(nx/12))*12)
-                        Printf.@printf(io,"%f\t",z[Int64(ii),jj])
+                # for ii=1:floor(nx/12)
+                #     Printf.@printf(io,"%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n",z[Int64((ii-1)*12+1),jj],z[Int64((ii-1)*12+2),jj],z[Int64((ii-1)*12+3),jj],z[Int64((ii-1)*12+4),jj],z[Int64((ii-1)*11+5),jj],z[Int64((ii-1)*12+6),jj],z[Int64((ii-1)*12+7),jj],z[Int64((ii-1)*12+8),jj],z[Int64((ii-1)*12+9),jj],z[Int64((ii-1)*12+10),jj],z[Int64((ii-1)*12+11),jj],z[Int64((ii-1)*12+12),jj]);
+                # end
+                #
+                #
+                # if mod(nx,12)!=0
+                #     for ii=(floor(nx/12)*12+1):(floor(nx/12)*12+(nx/12-floor(nx/12))*12)
+                #         Printf.@printf(io,"%f\t",z[Int64(ii),jj])
+                #     end
+                #     Printf.@printf(io,"\n");
+                # end
+                for ii=1:nx
+                    Printf.@printf(io,"%g",z[ii,jj])
+                    if mod(ii,12)==0 || ii==nx
+                        Printf.@printf(io,"\n")
+                    else
+                        Printf.@printf(io,"\t")
                     end
-                    Printf.@printf(io,"\n");
                 end
 
             end
@@ -50,6 +58,27 @@ module Delft3D
         end
         return B;
     end
+    function writecurv2gmt(X,Y,Z,mask,outname)
+        # Write curvilinear grid to gmt for plotting
+        si=size(X);
+        nx=si[1];
+        ny=si[2];
+
+        open(outname,"w") do io
+            for i=1:(nx-1)
+                for j=1:(ny-1)
+                    if (mask[i,j]==1 && mask[i+1,j]==1 && mask[i,j+1]==1 && mask[i+1,j+1]==1)
+                        Printf.@printf(io,">> -Z%f\n",Z[i,j]);
+                        Printf.@printf(io,"%f\t%f\n",X[i,j],Y[i,j]);
+                        Printf.@printf(io,"%f\t%f\n",X[i+1,j],Y[i+1,j]);
+                        Printf.@printf(io,"%f\t%f\n",X[i+1,j+1],Y[i+1,j+1]);
+                        Printf.@printf(io,"%f\t%f\n",X[i,j+1],Y[i,j+1]);
+                    end
+                end
+            end
+
+        end
+    end
 
     function Get_curv_grid_XZ(ncfile,var,outname,step,lev)
         #println("This code assumes you have a bathymetry file called trim-2008_TideCorr.nc in your working directory")
@@ -78,24 +107,25 @@ module Delft3D
         #Get mask info
         mask=NetCDF.ncread(ncfile,"KCS", start=[1,1], count = [-1,-1]);
 
-        si=size(X);
-        nx=si[1];
-        ny=si[2];
-
-        open(outname,"w") do io
-            for i=1:(nx-1)
-                for j=1:(ny-1)
-                    if (mask[i,j]==1 && mask[i+1,j]==1 && mask[i,j+1]==1 && mask[i+1,j+1]==1)
-                        Printf.@printf(io,">> -Z%f\n",-1.0.*Z[i,j]);
-                        Printf.@printf(io,"%f\t%f\n",X[i,j],Y[i,j]);
-                        Printf.@printf(io,"%f\t%f\n",X[i+1,j],Y[i+1,j]);
-                        Printf.@printf(io,"%f\t%f\n",X[i+1,j+1],Y[i+1,j+1]);
-                        Printf.@printf(io,"%f\t%f\n",X[i,j+1],Y[i,j+1]);
-                    end
-                end
-            end
-
-        end
+        writecurv2gmt(X,Y,Z,mask,outname)
+        # si=size(X);
+        # nx=si[1];
+        # ny=si[2];
+        #
+        # open(outname,"w") do io
+        #     for i=1:(nx-1)
+        #         for j=1:(ny-1)
+        #             if (mask[i,j]==1 && mask[i+1,j]==1 && mask[i,j+1]==1 && mask[i+1,j+1]==1)
+        #                 Printf.@printf(io,">> -Z%f\n",-1.0.*Z[i,j]);
+        #                 Printf.@printf(io,"%f\t%f\n",X[i,j],Y[i,j]);
+        #                 Printf.@printf(io,"%f\t%f\n",X[i+1,j],Y[i+1,j]);
+        #                 Printf.@printf(io,"%f\t%f\n",X[i+1,j+1],Y[i+1,j+1]);
+        #                 Printf.@printf(io,"%f\t%f\n",X[i,j+1],Y[i,j+1]);
+        #             end
+        #         end
+        #     end
+        #
+        # end
     end
 
     function Get_curv_grid_XZ(ncfile,var,outname)
