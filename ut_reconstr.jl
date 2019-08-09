@@ -1,6 +1,59 @@
 
 using Dates
+using DelimitedFiles
 
+struct shallow_s
+    iconst
+    coef
+    iname
+end
+
+struct const_s
+    name
+    freq
+    kmpr
+    ikmpr
+    df
+    doodson
+    semi
+    isat
+    nsat
+    ishallow
+    nshallow
+    doodsonamp
+    doodsonspecies
+end
+
+struct sat_s
+    deldood
+    phcorr
+    amprat
+    ilatfac
+    iconst
+end
+
+
+
+function load_Constants()
+    #constt,sat,shallow=load_Constants()
+
+    folder="D:\\Misc\\Julia\\";
+    shallowdata=readdlm(folder * "_ut_shallow.txt";skipstart=1);
+    shallow=shallow_s(shallowdata[:,1],shallowdata[:,2],shallowdata[:,3]);
+
+    satdata=readdlm(folder * "_ut_sat.txt";skipstart=1);
+    sat=sat_s(satdata[:,1:3],satdata[:,4],satdata[:,5],satdata[:,6],satdata[:,7]);
+
+    constdata=readdlm(folder * "_ut_const.txt";skipstart=1);
+
+    constt=const_s(convert.(String,constdata[:,1]),convert.(Float64,constdata[:,2]),convert.(String,constdata[:,3]),convert.(Float64,constdata[:,4]),convert.(Float64,constdata[:,5]),convert.(Float64,constdata[:,6:11]),convert.(Float64,constdata[:,12]),convert.(Float64,constdata[:,13]),convert.(Float64,constdata[:,14]),convert.(Float64,constdata[:,15]),convert.(Float64,constdata[:,16]),convert.(Float64,constdata[:,17]),convert.(Float64,constdata[:,18]));
+
+
+
+    return constt,sat,shallow
+
+
+end
 function  ut_astron(jd)
     # % UT_ASTRON()
     # % calculate astronomical constants
@@ -11,46 +64,37 @@ function  ut_astron(jd)
     # %   ader = matrix of derivatives of astro [cycles/day] (6 x nt)
     # % UTide v1p0 9/2011 d.codiga@gso.uri.edu
     # % (copy of t_astron.m from t_tide, Pawlowicz et al 2002)
-    nt=length(jd);
-    jd=collect(DateTime(2009,11,30,12,0,0):Dates.Hour(1):DateTime(2009,12,31,12,0,0));
 
+    nt=length(jd);
     d=datetime2julian.(jd).-datetime2julian(DateTime(1899,12,31,12,0,0));
     D=d./10000;
-    args=[ones(nt),
-          d,
-          D.*D,
-          D.^3]
+
+    args=[ones(nt) d D.*D D.^3]
     sc= [ 270.434164,13.1763965268,-0.0000850, 0.000000039];
     hc= [ 279.696678, 0.9856473354, 0.00002267,0.000000000];
     pc= [ 334.329556, 0.1114040803,-0.0007739,-0.00000026];
     npc=[-259.183275, 0.0529539222,-0.0001557,-0.000000050];
     ppc=[ 281.220844, 0.0000470684, 0.0000339, 0.000000070];
 
-    astro=zeros(6,nt)
+    astro=zeros(6,nt);
+    ader=zeros(6,nt);
 
     #astro=rem( [sc,hc,pc,npc,ppc].*args./360.0 ,1);
-    astro[2,:]=rem.( sc*args'./360.0 ,1);
-    astro[3,:]=rem( hc.*args./360.0 ,1);
-    astro[4,:]=rem( pc.*args./360.0 ,1);
-    astro[5,:]=rem( npc.*args./360.0 ,1);
-    astro[6,:]=rem( ppc.*args./360.0 ,1);
+    astro[2:6,:]=rem.( [sc hc pc npc ppc]'*args'./360.0 ,1);
 
 
 
-    tau=rem(jd(:)',1)+astro[3,:]-astro[2,:];
+    tau=rem.(datetime2unix.(jd)./(3600*24),1)+astro[3,:]-astro[2,:];
     astro[1,:]=tau;
-    dargs=[zeros(size(jd));
-           ones(size(jd));
-           2.0e-4.*D;
-           3.0e-4.*D.*D];
-    ader=[sc;hc;pc;npc;ppc]*dargs./360.0;
-    dtau=1.0+ader(2,:)-ader(1,:);
-    ader=[dtau;ader];
+    dargs=[zeros(nt) ones(nt) 2.0e-4.*D 3.0e-4.*D.*D];
+    ader[2:6,:]=[sc hc pc npc ppc]'*dargs'./360.0;
+    dtau=1.0.+ader[3,:]-ader[2,:];
+    ader[1,:]=dtau;
 
     return astro,ader
 end
 
-function [F,U,V] = ut_FUV(t,tref,lind,lat,ngflgs)
+function ut_FUV(t,tref,lind,lat,ngflgs)
     # % UT_FUV()
     # % compute nodal/satellite correction factors and astronomical argument
     # % inputs
@@ -69,102 +113,105 @@ function [F,U,V] = ut_FUV(t,tref,lind,lat,ngflgs)
     nt = length(t);
     nc = length(lind);
     # nodsat
-    if ngflgs(2) # none
-        F = ones(nt,nc);
-        U = zeros(nt,nc);
+    if ngflgs[2] # none
+        # F = ones(nt,nc);
+        # U = zeros(nt,nc);
     else
-        if ngflgs(1) # linearized times
+        if ngflgs[1] # linearized times
             #tt = tref;
         else         # exact times
             tt = t;
         end
         ntt = length(tt);
-        load('ut_constants.mat');
-        [astro,~]=ut_astron(tt');
+        constt,sat,shallow=load_Constants();
+        astro,dummy=ut_astron(tt);
         if abs(lat)<5
             lat=sign(lat).*5;
         end
         slat=sin(pi*lat/180);
         rr=sat.amprat;
-        j=find(sat.ilatfac==1);
-        rr(j)=rr(j).*0.36309.*(1.0-5.0.*slat.*slat)./slat;
-        j=find(sat.ilatfac==2);
-        rr(j)=rr(j).*2.59808.*slat;
-        uu=rem( sat.deldood*astro(4:6,:)+sat.phcorr(:,ones(1,ntt)), 1);
-        nfreq=length(const.isat); %#ok
-        mat = rr(:,ones(1,ntt)).*exp(1i*2*pi*uu);
-        F = ones(nfreq,ntt);
+        j=sat.ilatfac.==1;
+        rr[j]=rr[j].*0.36309.*(1.0-5.0.*slat.*slat)./slat;
+        j=(sat.ilatfac.==2);
+        rr[j]=rr[j].*2.59808.*slat;
+        uu=rem.( sat.deldood*astro[4:6,:]+sat.phcorr*ones(1,ntt), 1);
+        nfreq=length(constt.isat); #ok
+        mat = rr*ones(1,ntt).*exp.(1im*2*pi*uu);
+        F = ones(ComplexF64,nfreq,ntt);
         ind = unique(sat.iconst);
         for i = 1:length(ind)
-            F(ind(i),:) = 1+sum(mat(sat.iconst==ind(i),:),1);
+            F[Int64(ind[i]),:] = 1 .+sum(mat[sat.iconst.==ind[i],:],dims=1);
         end
-        U = imag(log(F))/(2*pi); % faster than angle(F)
-        F=abs(F);
-        for k=find(isfinite(const.ishallow))'
-            ik=const.ishallow(k)+(0:const.nshallow(k)-1);
-            j = shallow.iname(ik);
-            exp1 = shallow.coef(ik);
-            exp2 = abs(exp1);
-            F(k,:)=prod(F(j,:).^exp2(:,ones(ntt,1)),1);
-            U(k,:)=sum(U(j,:).*exp1(:,ones(ntt,1)),1);
+        U = imag(log.(F))/(2*pi); # faster than angle(F)
+        F=abs.(F);
+
+        for k in findall(isfinite.(constt.ishallow))
+            ik=convert.(Int64,constt.ishallow[k].+collect(0:(constt.nshallow[k]-1)));
+            j = convert.(Int64,shallow.iname[ik]);
+            exp1 = shallow.coef[ik];
+            exp2 = abs.(exp1);
+            F[k,:]=prod(F[j,:].^(exp2*ones(ntt,1)'),dims=1);
+            U[k,:]=sum(U[j,:].*(exp1*ones(ntt,1)'),dims=1);
         end
-        F=F(lind,:)';
-        U=U(lind,:)';
-        if ngflgs(1) % nodal/satellite with linearized times
-            F = F(ones(nt,1),:);
-            U = U(ones(nt,1),:);
+        F=F[lind,:];
+        U=U[lind,:];
+        if ngflgs[1] # nodal/satellite with linearized times
+            # F = F(ones(nt,1),:);
+            # U = U(ones(nt,1),:);
         end
     end
     # gwch (astron arg)
-    if ngflgs(4) % none (raw phase lags not greenwich phase lags)
-        if ~exist('const','var')
-            load('ut_constants.mat','const');
-        end
-        [~,ader] = ut_astron(tref);
-        ii=isfinite(const.ishallow);
-        const.freq(~ii) = (const.doodson(~ii,:)*ader)/(24);
-        for k=find(ii)'
-            ik=const.ishallow(k)+(0:const.nshallow(k)-1);
-            const.freq(k)=sum(const.freq(shallow.iname(ik)).*shallow.coef(ik));
-        end
-        V = 24*(t-tref)*const.freq(lind)';
+    if ngflgs[4] # none (raw phase lags not greenwich phase lags)
+        # if ~exist('const','var')
+        #     load('ut_constants.mat','const');
+        # end
+        # [~,ader] = ut_astron(tref);
+        # ii=isfinite(const.ishallow);
+        # const.freq(~ii) = (const.doodson(~ii,:)*ader)/(24);
+        # for k=find(ii)'
+        #     ik=const.ishallow(k)+(0:const.nshallow(k)-1);
+        #     const.freq(k)=sum(const.freq(shallow.iname(ik)).*shallow.coef(ik));
+        # end
+        # V = 24*(t-tref)*const.freq(lind)';
     else
-        if ngflgs(3)  # linearized times
-            tt = tref;
+        if ngflgs[3]  # linearized times
+            # tt = tref;
         else
             tt = t;   # exact times
         end
         ntt = length(tt);
-        if exist('astro','var')
-            if ~isequal(size(astro,2),ntt)
-                [astro,~]=ut_astron(tt');
-            end
-        else
-            [astro,~]=ut_astron(tt');
+        # if exist('astro','var')
+        #     if ~isequal(size(astro,2),ntt)
+        #         [astro,~]=ut_astron(tt');
+        #     end
+        # else
+        #     [astro,~]=ut_astron(tt');
+        # end
+        # if ~exist('const','var')
+        #     load('ut_constants.mat');
+        # end
+        V=rem.( constt.doodson*astro+constt.semi*ones(1,ntt), 1);
+        for k in findall(isfinite.(constt.ishallow))
+
+            ik = convert.(Int64,constt.ishallow[k].+collect(0:(constt.nshallow[k]-1)));
+            j = convert.(Int64,shallow.iname[ik]);
+            exp1 = shallow.coef[ik];
+            V[k,:] = sum(V[j,:].*(exp1*ones(ntt,1)'),dims=1);#sum(V[j,:].*exp1*ones(ntt,1)),1);
         end
-        if ~exist('const','var')
-            load('ut_constants.mat');
-        end
-        V=rem( const.doodson*astro+const.semi(:,ones(1,ntt)), 1);
-        for k=find(isfinite(const.ishallow))'
-            ik=const.ishallow(k)+(0:const.nshallow(k)-1);
-            j = shallow.iname(ik);
-            exp1 = shallow.coef(ik);
-            V(k,:) = sum(V(j,:).*exp1(:,ones(ntt,1)),1);
-        end
-        V=V(lind,:)';
-        if ngflgs(3)    % linearized times
-            [~,ader] = ut_astron(tref);
-            ii=isfinite(const.ishallow);
-            const.freq(~ii) = (const.doodson(~ii,:)*ader)/(24);
-            for k=find(ii)'
-                ik=const.ishallow(k)+(0:const.nshallow(k)-1);
-                const.freq(k)=sum( const.freq(shallow.iname(ik)).* ...
-                    shallow.coef(ik) );
-            end
-            V = V(ones(1,nt),:) + 24*(t-tref)*const.freq(lind)';
+        V=V[lind,:];
+        if ngflgs[3]    # linearized times
+            # [~,ader] = ut_astron(tref);
+            # ii=isfinite(const.ishallow);
+            # const.freq(~ii) = (const.doodson(~ii,:)*ader)/(24);
+            # for k=find(ii)'
+            #     ik=const.ishallow(k)+(0:const.nshallow(k)-1);
+            #     const.freq(k)=sum( const.freq(shallow.iname(ik)).* ...
+            #         shallow.coef(ik) );
+            # end
+            # V = V(ones(1,nt),:) + 24*(t-tref)*const.freq(lind)';
         end
     end
+    return F,U,V
 end
 
 function ut_E(t,tref,frq,lind,lat,ngflgs,prefilt)
@@ -185,15 +232,15 @@ function ut_E(t,tref,frq,lind,lat,ngflgs,prefilt)
 
     nt = length(t);
     nc = length(lind);
-    if ngflgs(2) && ngflgs(4)
+    if ngflgs[2] && ngflgs[4]
         F = ones(nt,nc);
         U = zeros(nt,nc);
         V = 24*(t-tref)*frq';
     else
-        [F,U,V] = ut_FUV(t,tref,lind,lat,ngflgs);
+        F,U,V = ut_FUV(t,tref,lind,lat,ngflgs);
     end
-    E = F.*exp(1im*(U+V)*2*pi);
-    if ~isempty(prefilt)
+    E = F.*exp.(1im*(U+V)*2*pi);
+    if !isempty(prefilt)
         # P=interp1(prefilt.frq,prefilt.P,frq)';
         # P( P>max(prefilt.rng) | P<min(prefilt.rng) | isnan(P) )=1;
         # E = E.*P(ones(nt,1),:);
@@ -203,15 +250,20 @@ end
 
 
 # first build a constituent object
-struct cnstit
+struct coef_s
     #constituent parameter
-    Name::String
-    A::Float64
-    A_ci::Float64
-    g::Float64
-    g_ci::Float64
-    freq::Float64
-    lind::Int64
+    Name
+    A
+    A_ci
+    g
+    g_ci
+    freq
+    lind
+    mean
+    slope
+    lat
+    reftime
+
 end
 
 struct option
@@ -222,21 +274,37 @@ struct option
     nodsatnone::Bool# 0
     gwchlint::Bool# 0
     gwchnone::Bool# 0
+    notrend::Bool
 end
 
 
 #Input should be an array of cnstit
-coef=Vector{cnstit}(undef,5)
-
-opt=option(false,2.0,0.0,false,false,false,false)
 
 
-coef[1]=cnstit("M2",0.493138384657320,0.000588412284822346,206.472841113229,0.0651156148667687,0.0805114006717706,48)
-coef[2]=cnstit("N2",0.122220407530187,0.000449550463417388,189.592580251570,0.248441538866563,0.0789992486986775,42)
-coef[3]=cnstit("S2",0.0625455828349263,0.000578787340178285,228.577462497562,0.485431942020961,0.0833333333333333,57)
-coef[4]=cnstit("K1",0.0624069393945612,0.00102801034135234,226.373348002011,0.871333797973204,0.0417807462216577,21)
-coef[5]=cnstit("O1",0.0319278720784309,0.000901721376152978,234.835289824733,1.62594515196797,0.0387306544501129,13)
+opt=option(false,2.0,0.0,false,false,false,false,false)
 
+
+Names=["M2" "N2" "S2" "K1" "O1" "NU2" "MU2" "P1" "2N2" "K2" "L2" "Q1" "M3" "MKS2" "EPS2" "LDA2" "J1" "SK3" "MS4" "NO1" "M4" "OQ2" "2MS6" "OO1" "M6" "THE1" "SO1" "PHI1" "UPS1" "SIG1" "TAU1" "SO3" "BET1" "MN4" "2SK5" "2Q1" "MK3" "RHO1" "2MN6" "MK4" "ETA2" "MSN2" "2MK6" "S4" "2SM6" "MO3" "SSA" "ALP1" "SK4" "SN4" "2MK5" "MSF" "MM" "MSM" "CHI1" "MSK6" "3MK7" "MF" "M8"]
+
+A=vec([0.493138384657320 0.122220407530187 0.0625455828349263 0.0624069393945612 0.0319278720784309 0.0264898452077264 0.0198967110349878 0.0193689717281431 0.0168389355226699 0.0163837418565904 0.00505401616918255 0.00480818731027601 0.00475331790152582 0.00462103544809817 0.00418090823059413 0.00352786018482124 0.00328474197224013 0.00299819494350093 0.00267398578239277 0.00222404439626272 0.00221481509990188 0.00202827962980981 0.00200951693684904 0.00169121773465207 0.00168236883535281 0.00159827419045768 0.00142463237217343 0.00109577059578159 0.00107846119006118 0.000993189286515915 0.000975633183598672 0.000918336597853578 0.000894227206344413 0.000867043932378154 0.000822231068028090 0.000800455613275940 0.000775203721978753 0.000732787870909778 0.000730892720022018 0.000642278338886823 0.000641631500624715 0.000592223723091890 0.000584837923589339 0.000511274861454928 0.000433699506638236 0.000407137846795978 0.000349049337361200 0.000346090587423473 0.000315558376262097 0.000298038267674244 0.000278980485781384 0.000249667477715449 0.000217132434292240 0.000180407802542512 0.000167720213574086 0.000119570299593473 0.000105539763535811 6.97852998023546e-05 3.44081585416120e-05])
+
+
+A_ci=vec([0.000588412284822346 0.000449550463417388 0.000578787340178285 0.00102801034135234 0.000901721376152978 0.000585423188152217 0.000483878821705129 0.00100428741461252 0.000536316279001065 0.000528567136260811 0.000557159648900962 0.000983518880624109 0.000380423461000557 0.000483825413427917 0.000615262454783609 0.000519315316376166 0.00102152209349214 0.000378377519189604 0.000277177036685191 0.000892607205617728 0.000290023838393219 0.000577605848346834 0.000157787122256716 0.00103672984663083 0.000166869447236043 0.00108130453248096 0.000979178365422599 0.000992046886662798 0.000812350033397252 0.000870678021316109 0.000907997233172556 0.000369550758945878 0.000867683288921515 0.000271926645768515 0.000163300640777281 0.000923975718625942 0.000398768279644157 0.000888418911306774 0.000173031439720871 0.000265467282237147 0.000606188010231063 0.000580009876029937 0.000163953246041184 0.000322027299520705 0.000201901560421842 0.000345312880500407 0.000172792737870738 0.000622538958918522 0.000252605584824177 0.000264108816971921 0.000168209986957173 0.000146719184967278 0.000160264048046739 0.000146318881279309 0.000574211721978646 0.000139940142057110 8.36494108371187e-05 0.000115817993922310 5.25293082784274e-05]);
+
+
+g=vec([206.472841113229 189.592580251570 228.577462497562 226.373348002011 234.835289824733 187.839560476596 168.304522584086 225.557939454922 178.394293158333 205.897114497219 215.311727831223 234.076201189012 229.206126637714 116.279828605487 166.928712508262 246.030955498636 214.551246561116 260.314054030127 310.338504114343 214.490110505745 275.280689204499 176.380397128870 9.20242692250800 255.683532644545 6.56915278799839 233.464930099497 180.491345742988 129.971659759884 112.443436991686 207.206716473664 62.0453964001101 338.538332765595 258.338812986228 254.295030014493 161.959834408184 173.887665321566 308.049732087583 158.438470723781 350.347560816338 256.377800075036 135.213419276068 213.090201785295 4.50300359535021 18.3477087351634 40.5006471268699 199.143608706706 157.887516216598 69.1261949804776 102.327941700325 317.739078406793 152.838849373427 314.204463395353 200.332540669770 170.900964010534 170.603322266183 273.618085775180 20.1614848496786 322.451311705972 35.7582443751978]);
+
+
+g_ci=vec([0.0651156148667687 0.248441538866563 0.485431942020961 0.871333797973204 1.62594515196797 1.20033782012330 1.40641743739766 2.76362215187178 1.57291814434557 1.88803924485863 5.28229777797954 12.4050990000139 4.82313481933750 6.62187807229875 7.96130144857590 8.18982885983305 17.3288572334094 7.16701207670834 5.32836753987433 26.4180730227022 7.52256768787866 15.8598106693538 5.16590633645002 30.3883739218752 5.47195767090829 29.8346432117955 39.8780336598458 53.6505051492318 55.4988652945298 52.6174627309777 66.3909486694234 24.0142762976939 58.4211411888950 18.4233983898710 13.6239107264190 65.9751036006228 30.5017797719044 86.4888725780996 12.5038974085096 24.4683746049129 48.5053867117686 62.0396418912288 24.2869938969906 30.7799282282531 24.8819491867134 45.8205210075085 22.9503081356430 152.927725429452 54.4011619209159 58.4178036573127 31.8309862319390 29.8719972296119 43.3996265495481 49.2415160697615 223.046195968590 84.2252019397368 49.7433247442838 132.879682332586 138.940203905053]);
+
+freq=vec([0.0805114006717706 0.0789992486986775 0.0833333333333333 0.0417807462216577 0.0387306544501129 0.0792016199833009 0.0776894680102079 0.0415525871116757 0.0774870967255845 0.0835614924433154 0.0820235526448637 0.0372185024770199 0.120767101007656 0.0807395597817526 0.0761773160371148 0.0818211813602403 0.0432928981947507 0.125114079554991 0.163844734005104 0.0402685942485646 0.161022801343541 0.0759749447524915 0.244356134676875 0.0448308379932025 0.241534202015312 0.0430905269101274 0.0446026788832204 0.0420089053316397 0.0463429899662955 0.0359087217885502 0.0389588135600949 0.122063987783446 0.0400404351385826 0.159510649370448 0.208447412888324 0.0357063505039268 0.122292146893428 0.0374208737616432 0.240022050042219 0.164072893115086 0.0850736444164084 0.0848454853064264 0.244584293786857 0.166666666666667 0.247178067338437 0.119242055121884 0.000228159109982028 0.0343965698154571 0.166894825776649 0.162332582032011 0.202803547565199 0.00282193266156274 0.00151215197309305 0.00130978068846969 0.0404709655331880 0.247406226448419 0.283314948236969 0.00305009177154477 0.322045602687082]);
+
+lind=vec([48 42 57 21 13 43 40 19 39 59 54 11 69 50 35 53 25 74 86 16 82 34 110 28 106 24 27 23 29 10 14 71 15 79 99 9 72 12 103 87 61 60 111 89 113 68 3 8 90 84 96 6 5 4 17 114 120 7 125]);
+
+
+coef=coef_s(Names,A,A_ci,g,g_ci,freq,lind,4.43338652302532e-05,4.10258541806695e-06,-15,DateTime(2019,02,4,7,34,02))
+
+t=collect(DateTime(2009,12,31,11,0,0):Dates.Hour(1):DateTime(2009,12,31,12,0,0));
 
 
 
@@ -263,18 +331,18 @@ if !isempty([])
     #         'not found in coef.name']);
     # end
 else
-    SNR=zeros(length(coef));
-    PE=zeros(length(coef));
+    SNR=zeros(length(A));
+    PE=zeros(length(A));
     #ind = collect(1:length(allcon));
     if opt.twodim
         SNR = (coef.Lsmaj.^2 +coef.Lsmin.^2)./((coef.Lsmaj_ci/1.96).^2 + (coef.Lsmin_ci/1.96).^2);
         PE = sum(coef.Lsmaj.^2 + coef.Lsmin.^2);
         PE = 100*(coef.Lsmaj.^2 + coef.Lsmin.^2)/PE;
     else
-        for el=1:length(coef)
-            SNR[el] = (coef[el].A.^2)./((coef[el].A_ci/1.96).^2);
-            PE[el] = 100*coef[el].A.^2/sum(coef[el].A.^2);
-        end
+
+        SNR = (A.^2)./((A_ci/1.96).^2);
+        PE = 100*A.^2/sum(A.^2);
+
 
     end
     ind = (SNR.>=opt.minsnr) .& (PE.>=opt.minpe);
@@ -289,11 +357,11 @@ if opt.twodim
     # ap = 0.5*(coef.Lsmaj(ind) + coef.Lsmin(ind)) .* exp(1i*(coef.theta(ind) - coef.g(ind))*rpd);
     # am = 0.5*(coef.Lsmaj(ind) - coef.Lsmin(ind)) .* exp(1i*(coef.theta(ind) + coef.g(ind))*rpd);
 else
-    ap=zeros(ComplexF64,length(coef))
-    for el=1:length(coef)
-        ap[el] = 0.5*coef[el].A.*exp(-1im * coef[el].g.*rpd);
-    end
-        am = conj.(ap);
+    #ap=zeros(ComplexF64,length(A))
+
+
+    ap = 0.5*A.*exp.(-1im .*g.*rpd);
+    am = conj.(ap);
 
 end
 
@@ -303,32 +371,44 @@ end
 # exponentials
 ngflgs = [opt.nodsatlint opt.nodsatnone opt.gwchlint opt.gwchnone];
 #fprintf('prep/calcs ... ');
-E = ut_E(t,coef.aux.reftime,coef.aux.frq(ind),coef.aux.lind(ind),coef.aux.lat,ngflgs,coef.aux.opt.prefilt);
+lat=-15.0
+prefilt=[];
+
+F,U,V = ut_FUV(t,coef.reftime,coef.lind,coef.lat,ngflgs)
+
+E = ut_E(t,coef.reftime,coef.freq[ind],coef.lind[ind],coef.lat,ngflgs,prefilt);
+E = ut_E(t,coef.reftime,coef.freq,coef.lind,coef.lat,ngflgs,prefilt);
 
 # fit
-fit = E*ap + conj(E)*am;
+#
+# apmat=[-0.220715368087716 + 0.109914025017337im -0.0602557379916665 + 0.0101834691186696im -0.0206902937416060 + 0.0234499302328646im -0.0215290313920052 + 0.0225866626235742im -0.00919409225057584 + 0.0130505142255799im -0.0131211342070848 + 0.00180660230875444im -0.00974181586198255 - 0.00201663115459324im -0.00678095732853621 + 0.00691432456281689im -0.00841616168049259 - 0.000235923614686907im -0.00736924141320742 + 0.00357785274986504im -0.00206208734738200 + 0.00146067300630796im -0.00141050283426213 + 0.00194683025896284im -0.00155276553840507 + 0.00179928512220356im -0.00102299454298401 - 0.00207170806779573im -0.00203628924977127 - 0.000472783776612949im -0.000716584283619408 + 0.00161181771158571im -0.00135268836520523 + 0.000931459415480567im -0.000252219540069636 + 0.00147772748956487im 0.000865438392413893 + 0.00101910077030965im -0.000916555318024052 + 0.000629698116670782im 0.000101920238553822 + 0.00110270746195964im -0.00101211679582528 - 6.40246498134073e-05im 0.000991826716492382 - 0.000160683989005518im -0.000209100052536535 + 0.000819348231541166im 0.000835661623160310 - 9.62334459461629e-05im -0.000475738063468649 + 0.000642100764629577im -0.000712289994049065 + 6.10846451304025e-06im -0.000351966239299713 - 0.000419878632509566im -0.000205862701768496 - 0.000498387582748228im -0.000441652794481203 + 0.000227044156144663im 0.000228674682013349 - 0.000430897803476432im 0.000427330745072818 + 0.000167999884091720im -9.03723493492488e-05 + 0.000437885159162457im -0.000117347438806501 + 0.000417337841291678im -0.000390904952513283 - 0.000127315750825424im -0.000397952529360415 - 4.26155087015052e-05im 0.000238896557278706 + 0.000305227190077833im -0.000340754951956772 - 0.000134649837189130im 0.000360272732712544 + 6.12747917918276e-05im -7.56342775182107e-05 + 0.000312105466493463im -0.000227694407108331 - 0.000226004430531940im -0.000248086098742038 + 0.000161664845155528im 0.000291516328596238 - 2.29582093997495e-05im 0.000242641768333923 - 8.04702942005666e-05im 0.000164892255418646 - 0.000140834511457647im -0.000192311478034998 + 6.67577859834419e-05im -0.000161687792191583 - 6.56956454742981e-05im 6.16579164458794e-05 - 0.000161687893842842im -3.36869360809473e-05 - 0.000154141047566088im 0.000110287563159189 + 0.000100216543853667im -0.000124108110328544 - 6.36765640748792e-05im 8.70366978427342e-05 + 8.94878516103227e-05im -0.000101801645505269 + 3.77233147779724e-05im -8.90688175611159e-05 - 1.42649760889808e-05im -8.27348408727702e-05 - 1.36917353206820e-05im 3.77277475048279e-06 + 5.96659895325663e-05im 4.95364033438606e-05 - 1.81880500756151e-05im 2.76641401170243e-05 + 2.12648152757502e-05im 1.39609366532080e-05 - 1.00534865256433e-05im]
 
+Emat=[0.900984253634346 - 0.401294893970189im	0.972023123424548 + 0.144765462861572im	0.865576294877001 - 0.502265663676120im	-1.05309847367687 - 0.0516371319942883im	-0.942032350655470 + 0.537676848372059im	0.600134260754564 - 0.775730498998193im	0.925894098626574 - 0.327292346555690im	-0.906862127019666 + 0.410435925147843im	0.695380032573230 + 0.650177857404103im	-1.12052342812600 - 0.117721421098242im	-0.762471836668659 + 0.605922580302037im	-1.10264662167385 - 0.0226073536867553im	-0.795218789898054 + 0.573739447746226im	-1.08733004880659 - 0.233394026253199im	0.941049174270329 + 0.230470688329272im	-0.981104761023656 - 0.0798237231942935im	-1.05924088455188 + 0.422161802565607im	-0.937472633357290 + 0.484239326407928im	0.578313965753561 - 0.799884801589165im	-0.484016424442857 - 1.05845257947511im	0.650735033370494 - 0.723120761062010im	0.230546967546135 + 0.906907400184533im	0.200062090158699 - 0.952758052521826im	0.868904934379501 + 1.02855900594764im	0.296117349217012 - 0.912657065412055im	-0.896803229409506 - 0.643151836475464im	-1.08545749082551 + 0.00775016955131491im	0.939784618614391 + 0.245642260775880im	1.35021877538038 + 0.317025830803117im	-0.987090585195204 + 0.474383157888011im	-0.880017039722859 + 0.129350651824511im	-0.545344252643757 + 0.938550838061376im	1.10150504991172 - 0.0727781144827811im	0.933871169443571 - 0.259636513742863im	-0.568237301873632 + 0.890006396357309im	-0.956247249724151 - 0.598115329621184im	-0.969546859717791 + 0.376078797504635im	-0.614357721528849 + 0.908569291732247im	0.737212411338518 - 0.608686142474512im	-1.05681496976754 + 0.343595183555962im	-1.08191476353031 + 0.443499453232528im	0.446338853773822 - 0.861226412152150im	-0.814290654011854 + 0.733668301247499im	0.496951525344984 - 0.869498504417429im	0.0988201890179697 - 0.982828570710356im	-0.632989340497037 + 0.862471146199742im	-0.939585488113524 - 0.342314344611019im	-1.10947239093098 - 0.0990939293413315im	-1.02902594493698 + 0.460903571790476im	0.914070894990138 - 0.362908286225493im	-0.722627952597300 + 0.727915278946996im	0.997460872793679 - 0.0712166219759934im	0.845940991042982 - 0.533276513333578im	0.881771191116436 + 0.471677396656976im	-1.02169572720688 + 0.392877586094133im	-0.742177922997285 + 0.828209718093105im	-0.358967721841877 + 0.945827111928525im	-0.961578232315114 - 0.274531060424392im	-0.0994475514232031 - 0.941120025161167im;
+0.982595403484339 + 0.0855534189331518im	0.785776514967336 + 0.590207669416219im	1.00074383286633 - 0.00218671537302981im	-1.00361463618971 - 0.323160701663889im	-1.04382536882479 + 0.294847462030138im	0.897643112308453 - 0.395169894888775im	0.971252845208622 + 0.145161178618068im	-0.982074135848498 + 0.162441297473266im	0.310386664538014 + 0.899975452877866im	-0.910578660158250 - 0.663515744513414im	-0.962018427910355 + 0.151421288261346im	-1.06738886093690 - 0.277496266126762im	-0.971823973161190 - 0.130813149512354im	-0.836991651614157 - 0.732245929611538im	0.729151437235073 + 0.637993039949458im	-0.815031796827268 - 0.551964451657550im	-1.13370457634396 + 0.122037839124634im	-1.00506781821552 - 0.321206459661337im	0.983513371216147 + 0.0834683999037132im	-0.203689660168913 - 1.14597135165016im	0.958174339457399 + 0.168128792392170im	-0.211901275750394 + 0.911449935512984im	0.959254710837730 + 0.166158597555593im	0.548743593695357 + 1.22956043657552im	0.927113708677230 + 0.247177669272514im	-0.692122136150814 - 0.859570852684174im	-1.04524654791874 - 0.292784230282181im	0.843155796841574 + 0.482326957697184im	1.20234480217803 + 0.691313365171052im	-1.06818974100824 + 0.241539009471944im	-0.885148892254376 - 0.0877818829638918im	-1.04395705296290 + 0.297349328243716im	1.08494035097661 + 0.203711176457727im	0.721606107773722 + 0.647161210442413im	-1.00651780779485 - 0.319247586333880im	-0.799216267543096 - 0.795852860338162im	-0.958499625497431 - 0.403398883459091im	-0.809105989058633 + 0.740440525752879im	0.653679990470418 + 0.697633500337162im	-0.837964365523326 - 0.729870638282476im	-1.15691937846441 - 0.169541718837749im	0.822085399035071 - 0.514889626278931im	-0.760937005362903 - 0.788858250729211im	1.00148343729586 - 0.00437668384758714im	0.984427462419360 + 0.0813798226344425im	-1.05088321788802 + 0.200412931847718im	-0.939093792611954 - 0.343660950178655im	-1.06240733010338 - 0.334697413865209im	-0.912706898571826 - 0.662018112976987im	0.787651617548748 + 0.588928415693643im	-0.907305172581495 - 0.478380808665068im	0.998566742943615 - 0.0535206491644194im	0.850969462945738 - 0.525215168415614im	0.877859661722807 + 0.478917961993408im	-1.08766603633658 + 0.123225668973768im	-0.840183690304268 - 0.728581150491256im	-0.850586778402839 - 0.547677843239496im	-0.956140786953108 - 0.292907486289939im	0.889830773963373 + 0.322193389188275im]
+
+diffE=maximum(abs.(real.(permutedims(E).-Emat)))
+
+fit = permutedims(E)*ap + conj(transpose(E))*am;
+tin=t;
 # mean (& trend)
-u = nan*ones(size(tin));
-whr = ~isnan(tin);
-if coef.aux.opt.twodim
-    v = u;
-    if coef.aux.opt.notrend
-        u(whr) = real(fit) + coef.umean;
-        v(whr) = imag(fit) + coef.vmean;
-    else
-        u(whr) = real(fit) + coef.umean + ...
-            coef.uslope*(t-coef.aux.reftime);
-        v(whr) = imag(fit) + coef.vmean + ...
-            coef.vslope*(t-coef.aux.reftime);
-    end
+u = NaN*ones(size(tin));
+whr = .!isnan.(datetime2unix.(tin)); # Absurd statement
+if opt.twodim
+    # v = u;
+    # if coef.aux.opt.notrend
+    #     u(whr) = real(fit) + coef.umean;
+    #     v(whr) = imag(fit) + coef.vmean;
+    # else
+    #     u(whr) = real(fit) + coef.umean + ...
+    #         coef.uslope*(t-coef.aux.reftime);
+    #     v(whr) = imag(fit) + coef.vmean + ...
+    #         coef.vslope*(t-coef.aux.reftime);
+    # end
 else
-    if coef.aux.opt.notrend
-        u(whr) = real(fit) + coef.mean;
-    else
-        u(whr) = real(fit) + coef.mean + ...
-            coef.slope*(t-coef.aux.reftime);
-    end
-    v = [];
+     if opt.notrend
+        u[whr] = real(fit) + coef.mean;
+     else
+        u[whr] = real(fit) .+ coef.mean .+ coef.slope*(datetime2unix.(t).-datetime2unix(coef.reftime))./(3600*24);
+     end
+    # v = [];
 end
-fprintf('done.\n');
