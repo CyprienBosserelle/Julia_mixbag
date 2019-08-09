@@ -32,7 +32,33 @@ struct sat_s
     iconst
 end
 
+# first build a constituent object
+struct coef_s
+    #constituent parameter
+    Name
+    A
+    A_ci
+    g
+    g_ci
+    freq
+    lind
+    mean
+    slope
+    lat
+    reftime
 
+end
+
+struct opt_s
+    twodim::Bool
+    minsnr::Float64
+    minpe::Float64
+    nodsatlint::Bool# 0
+    nodsatnone::Bool# 0
+    gwchlint::Bool# 0
+    gwchnone::Bool# 0
+    notrend::Bool
+end
 
 function load_Constants()
     #constt,sat,shallow=load_Constants()
@@ -249,39 +275,117 @@ function ut_E(t,tref,frq,lind,lat,ngflgs,prefilt)
 end
 
 
-# first build a constituent object
-struct coef_s
-    #constituent parameter
-    Name
-    A
-    A_ci
-    g
-    g_ci
-    freq
-    lind
-    mean
-    slope
-    lat
-    reftime
 
-end
 
-struct option
-    twodim::Bool
-    minsnr::Float64
-    minpe::Float64
-    nodsatlint::Bool# 0
-    nodsatnone::Bool# 0
-    gwchlint::Bool# 0
-    gwchnone::Bool# 0
-    notrend::Bool
+function ut_reconstr1(t,coef,opt)
+    # single tide reconstruction based on UT
+    # UT_RECONSTR1()
+    # Reconstruction for a single record. See comments for UT_RECONSTR().
+    # UTide v1p0 9/2011 d.codiga@gso.uri.edu
+
+    #fprintf('ut_reconstr: ');
+
+    # parse inputs and options
+    #[t,opt] = ut_rcninit(tin,varargin);
+
+    #Preallocate a few vars
+
+
+
+
+    # determine constituents to include
+    if !isempty([])
+        # [~,ind] = ismember(cellstr(opt.cnstit),coef.name);
+        # if ~isequal(length(ind),length(cellstr(opt.cnstit)))
+        #     error(['ut_reconstr: one or more of input constituents Cnstit '...
+        #         'not found in coef.name']);
+        # end
+    else
+        SNR=zeros(length(A));
+        PE=zeros(length(A));
+        #ind = collect(1:length(allcon));
+        if opt.twodim
+            # SNR = (coef.Lsmaj.^2 +coef.Lsmin.^2)./((coef.Lsmaj_ci/1.96).^2 + (coef.Lsmin_ci/1.96).^2);
+            # PE = sum(coef.Lsmaj.^2 + coef.Lsmin.^2);
+            # PE = 100*(coef.Lsmaj.^2 + coef.Lsmin.^2)/PE;
+        else
+
+            SNR = (A.^2)./((A_ci/1.96).^2);
+            PE = 100*A.^2/sum(A.^2);
+
+
+        end
+        ind = (SNR.>=opt.minsnr) .& (PE.>=opt.minpe);
+    end
+
+
+
+    #############################
+    # complex coefficients
+    rpd = pi/180;
+    if opt.twodim
+        # ap = 0.5*(coef.Lsmaj(ind) + coef.Lsmin(ind)) .* exp(1i*(coef.theta(ind) - coef.g(ind))*rpd);
+        # am = 0.5*(coef.Lsmaj(ind) - coef.Lsmin(ind)) .* exp(1i*(coef.theta(ind) + coef.g(ind))*rpd);
+    else
+        #ap=zeros(ComplexF64,length(A))
+
+
+        ap = 0.5*coef.A[ind].*exp.(-1im .*coef.g[ind].*rpd);
+        am = conj.(ap);
+
+    end
+
+
+
+
+    # exponentials
+    ngflgs = [opt.nodsatlint opt.nodsatnone opt.gwchlint opt.gwchnone];
+    #fprintf('prep/calcs ... ');
+
+    prefilt=[];
+
+    F,U,V = ut_FUV(t,coef.reftime,coef.lind,coef.lat,ngflgs)
+
+    E = ut_E(t,coef.reftime,coef.freq[ind],coef.lind[ind],coef.lat,ngflgs,prefilt);
+    #E = ut_E(t,coef.reftime,coef.freq,coef.lind,coef.lat,ngflgs,prefilt);
+
+    # fit
+    #
+
+
+    fit = permutedims(E)*ap + conj(transpose(E))*am;
+
+    # mean (& trend)
+    u = NaN*ones(size(t));
+    whr = .!isnan.(datetime2unix.(t)); # Absurd statement
+    if opt.twodim
+        # v = u;
+        # if coef.aux.opt.notrend
+        #     u(whr) = real(fit) + coef.umean;
+        #     v(whr) = imag(fit) + coef.vmean;
+        # else
+        #     u(whr) = real(fit) + coef.umean + ...
+        #         coef.uslope*(t-coef.aux.reftime);
+        #     v(whr) = imag(fit) + coef.vmean + ...
+        #         coef.vslope*(t-coef.aux.reftime);
+        # end
+    else
+         if opt.notrend
+            u[whr] = real(fit) + coef.mean;
+         else
+            u[whr] = real(fit) .+ coef.mean .+ coef.slope*(datetime2unix.(t).-datetime2unix(coef.reftime))./(3600*24);
+         end
+        # v = [];
+    end
+
+    return u
 end
 
 
 #Input should be an array of cnstit
 
 
-opt=option(false,2.0,0.0,false,false,false,false,false)
+opt=opt_s(false,2.0,0.0,false,false,false,false,false)
 
 
 Names=["M2" "N2" "S2" "K1" "O1" "NU2" "MU2" "P1" "2N2" "K2" "L2" "Q1" "M3" "MKS2" "EPS2" "LDA2" "J1" "SK3" "MS4" "NO1" "M4" "OQ2" "2MS6" "OO1" "M6" "THE1" "SO1" "PHI1" "UPS1" "SIG1" "TAU1" "SO3" "BET1" "MN4" "2SK5" "2Q1" "MK3" "RHO1" "2MN6" "MK4" "ETA2" "MSN2" "2MK6" "S4" "2SM6" "MO3" "SSA" "ALP1" "SK4" "SN4" "2MK5" "MSF" "MM" "MSM" "CHI1" "MSK6" "3MK7" "MF" "M8"]
@@ -306,109 +410,4 @@ coef=coef_s(Names,A,A_ci,g,g_ci,freq,lind,4.43338652302532e-05,4.10258541806695e
 
 t=collect(DateTime(2009,12,31,11,0,0):Dates.Hour(1):DateTime(2009,12,31,12,0,0));
 
-
-
-# single tide reconstruction based on UT
-# UT_RECONSTR1()
-# Reconstruction for a single record. See comments for UT_RECONSTR().
-# UTide v1p0 9/2011 d.codiga@gso.uri.edu
-
-#fprintf('ut_reconstr: ');
-
-# parse inputs and options
-#[t,opt] = ut_rcninit(tin,varargin);
-
-#Preallocate a few vars
-
-
-
-
-# determine constituents to include
-if !isempty([])
-    # [~,ind] = ismember(cellstr(opt.cnstit),coef.name);
-    # if ~isequal(length(ind),length(cellstr(opt.cnstit)))
-    #     error(['ut_reconstr: one or more of input constituents Cnstit '...
-    #         'not found in coef.name']);
-    # end
-else
-    SNR=zeros(length(A));
-    PE=zeros(length(A));
-    #ind = collect(1:length(allcon));
-    if opt.twodim
-        SNR = (coef.Lsmaj.^2 +coef.Lsmin.^2)./((coef.Lsmaj_ci/1.96).^2 + (coef.Lsmin_ci/1.96).^2);
-        PE = sum(coef.Lsmaj.^2 + coef.Lsmin.^2);
-        PE = 100*(coef.Lsmaj.^2 + coef.Lsmin.^2)/PE;
-    else
-
-        SNR = (A.^2)./((A_ci/1.96).^2);
-        PE = 100*A.^2/sum(A.^2);
-
-
-    end
-    ind = (SNR.>=opt.minsnr) .& (PE.>=opt.minpe);
-end
-
-
-
-#############################
-# complex coefficients
-rpd = pi/180;
-if opt.twodim
-    # ap = 0.5*(coef.Lsmaj(ind) + coef.Lsmin(ind)) .* exp(1i*(coef.theta(ind) - coef.g(ind))*rpd);
-    # am = 0.5*(coef.Lsmaj(ind) - coef.Lsmin(ind)) .* exp(1i*(coef.theta(ind) + coef.g(ind))*rpd);
-else
-    #ap=zeros(ComplexF64,length(A))
-
-
-    ap = 0.5*A.*exp.(-1im .*g.*rpd);
-    am = conj.(ap);
-
-end
-
-
-
-
-# exponentials
-ngflgs = [opt.nodsatlint opt.nodsatnone opt.gwchlint opt.gwchnone];
-#fprintf('prep/calcs ... ');
-lat=-15.0
-prefilt=[];
-
-F,U,V = ut_FUV(t,coef.reftime,coef.lind,coef.lat,ngflgs)
-
-E = ut_E(t,coef.reftime,coef.freq[ind],coef.lind[ind],coef.lat,ngflgs,prefilt);
-E = ut_E(t,coef.reftime,coef.freq,coef.lind,coef.lat,ngflgs,prefilt);
-
-# fit
-#
-# apmat=[-0.220715368087716 + 0.109914025017337im -0.0602557379916665 + 0.0101834691186696im -0.0206902937416060 + 0.0234499302328646im -0.0215290313920052 + 0.0225866626235742im -0.00919409225057584 + 0.0130505142255799im -0.0131211342070848 + 0.00180660230875444im -0.00974181586198255 - 0.00201663115459324im -0.00678095732853621 + 0.00691432456281689im -0.00841616168049259 - 0.000235923614686907im -0.00736924141320742 + 0.00357785274986504im -0.00206208734738200 + 0.00146067300630796im -0.00141050283426213 + 0.00194683025896284im -0.00155276553840507 + 0.00179928512220356im -0.00102299454298401 - 0.00207170806779573im -0.00203628924977127 - 0.000472783776612949im -0.000716584283619408 + 0.00161181771158571im -0.00135268836520523 + 0.000931459415480567im -0.000252219540069636 + 0.00147772748956487im 0.000865438392413893 + 0.00101910077030965im -0.000916555318024052 + 0.000629698116670782im 0.000101920238553822 + 0.00110270746195964im -0.00101211679582528 - 6.40246498134073e-05im 0.000991826716492382 - 0.000160683989005518im -0.000209100052536535 + 0.000819348231541166im 0.000835661623160310 - 9.62334459461629e-05im -0.000475738063468649 + 0.000642100764629577im -0.000712289994049065 + 6.10846451304025e-06im -0.000351966239299713 - 0.000419878632509566im -0.000205862701768496 - 0.000498387582748228im -0.000441652794481203 + 0.000227044156144663im 0.000228674682013349 - 0.000430897803476432im 0.000427330745072818 + 0.000167999884091720im -9.03723493492488e-05 + 0.000437885159162457im -0.000117347438806501 + 0.000417337841291678im -0.000390904952513283 - 0.000127315750825424im -0.000397952529360415 - 4.26155087015052e-05im 0.000238896557278706 + 0.000305227190077833im -0.000340754951956772 - 0.000134649837189130im 0.000360272732712544 + 6.12747917918276e-05im -7.56342775182107e-05 + 0.000312105466493463im -0.000227694407108331 - 0.000226004430531940im -0.000248086098742038 + 0.000161664845155528im 0.000291516328596238 - 2.29582093997495e-05im 0.000242641768333923 - 8.04702942005666e-05im 0.000164892255418646 - 0.000140834511457647im -0.000192311478034998 + 6.67577859834419e-05im -0.000161687792191583 - 6.56956454742981e-05im 6.16579164458794e-05 - 0.000161687893842842im -3.36869360809473e-05 - 0.000154141047566088im 0.000110287563159189 + 0.000100216543853667im -0.000124108110328544 - 6.36765640748792e-05im 8.70366978427342e-05 + 8.94878516103227e-05im -0.000101801645505269 + 3.77233147779724e-05im -8.90688175611159e-05 - 1.42649760889808e-05im -8.27348408727702e-05 - 1.36917353206820e-05im 3.77277475048279e-06 + 5.96659895325663e-05im 4.95364033438606e-05 - 1.81880500756151e-05im 2.76641401170243e-05 + 2.12648152757502e-05im 1.39609366532080e-05 - 1.00534865256433e-05im]
-
-Emat=[0.900984253634346 - 0.401294893970189im	0.972023123424548 + 0.144765462861572im	0.865576294877001 - 0.502265663676120im	-1.05309847367687 - 0.0516371319942883im	-0.942032350655470 + 0.537676848372059im	0.600134260754564 - 0.775730498998193im	0.925894098626574 - 0.327292346555690im	-0.906862127019666 + 0.410435925147843im	0.695380032573230 + 0.650177857404103im	-1.12052342812600 - 0.117721421098242im	-0.762471836668659 + 0.605922580302037im	-1.10264662167385 - 0.0226073536867553im	-0.795218789898054 + 0.573739447746226im	-1.08733004880659 - 0.233394026253199im	0.941049174270329 + 0.230470688329272im	-0.981104761023656 - 0.0798237231942935im	-1.05924088455188 + 0.422161802565607im	-0.937472633357290 + 0.484239326407928im	0.578313965753561 - 0.799884801589165im	-0.484016424442857 - 1.05845257947511im	0.650735033370494 - 0.723120761062010im	0.230546967546135 + 0.906907400184533im	0.200062090158699 - 0.952758052521826im	0.868904934379501 + 1.02855900594764im	0.296117349217012 - 0.912657065412055im	-0.896803229409506 - 0.643151836475464im	-1.08545749082551 + 0.00775016955131491im	0.939784618614391 + 0.245642260775880im	1.35021877538038 + 0.317025830803117im	-0.987090585195204 + 0.474383157888011im	-0.880017039722859 + 0.129350651824511im	-0.545344252643757 + 0.938550838061376im	1.10150504991172 - 0.0727781144827811im	0.933871169443571 - 0.259636513742863im	-0.568237301873632 + 0.890006396357309im	-0.956247249724151 - 0.598115329621184im	-0.969546859717791 + 0.376078797504635im	-0.614357721528849 + 0.908569291732247im	0.737212411338518 - 0.608686142474512im	-1.05681496976754 + 0.343595183555962im	-1.08191476353031 + 0.443499453232528im	0.446338853773822 - 0.861226412152150im	-0.814290654011854 + 0.733668301247499im	0.496951525344984 - 0.869498504417429im	0.0988201890179697 - 0.982828570710356im	-0.632989340497037 + 0.862471146199742im	-0.939585488113524 - 0.342314344611019im	-1.10947239093098 - 0.0990939293413315im	-1.02902594493698 + 0.460903571790476im	0.914070894990138 - 0.362908286225493im	-0.722627952597300 + 0.727915278946996im	0.997460872793679 - 0.0712166219759934im	0.845940991042982 - 0.533276513333578im	0.881771191116436 + 0.471677396656976im	-1.02169572720688 + 0.392877586094133im	-0.742177922997285 + 0.828209718093105im	-0.358967721841877 + 0.945827111928525im	-0.961578232315114 - 0.274531060424392im	-0.0994475514232031 - 0.941120025161167im;
-0.982595403484339 + 0.0855534189331518im	0.785776514967336 + 0.590207669416219im	1.00074383286633 - 0.00218671537302981im	-1.00361463618971 - 0.323160701663889im	-1.04382536882479 + 0.294847462030138im	0.897643112308453 - 0.395169894888775im	0.971252845208622 + 0.145161178618068im	-0.982074135848498 + 0.162441297473266im	0.310386664538014 + 0.899975452877866im	-0.910578660158250 - 0.663515744513414im	-0.962018427910355 + 0.151421288261346im	-1.06738886093690 - 0.277496266126762im	-0.971823973161190 - 0.130813149512354im	-0.836991651614157 - 0.732245929611538im	0.729151437235073 + 0.637993039949458im	-0.815031796827268 - 0.551964451657550im	-1.13370457634396 + 0.122037839124634im	-1.00506781821552 - 0.321206459661337im	0.983513371216147 + 0.0834683999037132im	-0.203689660168913 - 1.14597135165016im	0.958174339457399 + 0.168128792392170im	-0.211901275750394 + 0.911449935512984im	0.959254710837730 + 0.166158597555593im	0.548743593695357 + 1.22956043657552im	0.927113708677230 + 0.247177669272514im	-0.692122136150814 - 0.859570852684174im	-1.04524654791874 - 0.292784230282181im	0.843155796841574 + 0.482326957697184im	1.20234480217803 + 0.691313365171052im	-1.06818974100824 + 0.241539009471944im	-0.885148892254376 - 0.0877818829638918im	-1.04395705296290 + 0.297349328243716im	1.08494035097661 + 0.203711176457727im	0.721606107773722 + 0.647161210442413im	-1.00651780779485 - 0.319247586333880im	-0.799216267543096 - 0.795852860338162im	-0.958499625497431 - 0.403398883459091im	-0.809105989058633 + 0.740440525752879im	0.653679990470418 + 0.697633500337162im	-0.837964365523326 - 0.729870638282476im	-1.15691937846441 - 0.169541718837749im	0.822085399035071 - 0.514889626278931im	-0.760937005362903 - 0.788858250729211im	1.00148343729586 - 0.00437668384758714im	0.984427462419360 + 0.0813798226344425im	-1.05088321788802 + 0.200412931847718im	-0.939093792611954 - 0.343660950178655im	-1.06240733010338 - 0.334697413865209im	-0.912706898571826 - 0.662018112976987im	0.787651617548748 + 0.588928415693643im	-0.907305172581495 - 0.478380808665068im	0.998566742943615 - 0.0535206491644194im	0.850969462945738 - 0.525215168415614im	0.877859661722807 + 0.478917961993408im	-1.08766603633658 + 0.123225668973768im	-0.840183690304268 - 0.728581150491256im	-0.850586778402839 - 0.547677843239496im	-0.956140786953108 - 0.292907486289939im	0.889830773963373 + 0.322193389188275im]
-
-diffE=maximum(abs.(real.(permutedims(E).-Emat)))
-
-fit = permutedims(E)*ap + conj(transpose(E))*am;
-tin=t;
-# mean (& trend)
-u = NaN*ones(size(tin));
-whr = .!isnan.(datetime2unix.(tin)); # Absurd statement
-if opt.twodim
-    # v = u;
-    # if coef.aux.opt.notrend
-    #     u(whr) = real(fit) + coef.umean;
-    #     v(whr) = imag(fit) + coef.vmean;
-    # else
-    #     u(whr) = real(fit) + coef.umean + ...
-    #         coef.uslope*(t-coef.aux.reftime);
-    #     v(whr) = imag(fit) + coef.vmean + ...
-    #         coef.vslope*(t-coef.aux.reftime);
-    # end
-else
-     if opt.notrend
-        u[whr] = real(fit) + coef.mean;
-     else
-        u[whr] = real(fit) .+ coef.mean .+ coef.slope*(datetime2unix.(t).-datetime2unix(coef.reftime))./(3600*24);
-     end
-    # v = [];
-end
+sl=ut_reconstr1(t,coef,opt);
