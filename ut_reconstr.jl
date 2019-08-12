@@ -1,6 +1,6 @@
 module ut_reconstr
 import Dates, DelimitedFiles
-export coef_s,opt_s,ut_reconstr1,Predicttidetime
+export coef_s,opt_s,makelind,ut_reconstr1,Predicttidetime
 
     struct shallow_s
         iconst
@@ -372,7 +372,7 @@ export coef_s,opt_s,ut_reconstr1,Predicttidetime
             # end
         else
              if opt.notrend
-                u[whr] = real(fit) + coef.mean;
+                u[whr] = real(fit) .+ coef.mean;
              else
                 u[whr] = real(fit) .+ coef.mean .+ coef.slope*(Dates.datetime2unix.(t).-Dates.datetime2unix(coef.reftime))./(3600*24);
              end
@@ -381,63 +381,84 @@ export coef_s,opt_s,ut_reconstr1,Predicttidetime
 
         return u
     end
-end
 
-function findlocalmaxima(signal::Vector)
-   inds = Int[]
-   if length(signal)>1
-       if signal[1]>signal[2]
-           push!(inds,1)
-       end
-       for i=2:length(signal)-1
-           if signal[i-1]<signal[i]>signal[i+1]
-               push!(inds,i)
+
+    function findlocalmaxima(signal::Vector)
+       inds = Int[]
+       if length(signal)>1
+           if signal[1]>signal[2]
+               push!(inds,1)
+           end
+           for i=2:length(signal)-1
+               if signal[i-1]<signal[i]>signal[i+1]
+                   push!(inds,i)
+               end
+           end
+           if signal[end]>signal[end-1]
+               push!(inds,length(signal))
            end
        end
-       if signal[end]>signal[end-1]
-           push!(inds,length(signal))
-       end
-   end
-   inds
- end
+       inds
+     end
 
- function findlocalminima(signal::Vector)
-     subsign=signal.*-1.0;
-     return findlocalmaxima(subsign);
- end
-function Predicttidetime(t,coef,opt)
-    #Return high and low tide time and level
+     function findlocalminima(signal::Vector)
+         subsign=signal.*-1.0;
+         return findlocalmaxima(subsign);
+     end
+    function Predicttidetime(t,coef,opt)
+        #Return high and low tide time and level
 
-    # first predict the tide at 1 minute interval
-    # need to do that 1 day before and 1 day after what is requested
-    tint=collect(floor(minimum(t)-Dates.Day(1), Dates.Day):Dates.Minute(1):ceil(maximum(t)+Dates.Day(1), Dates.Day));
+        # first predict the tide at 1 minute interval
+        # need to do that 1 day before and 1 day after what is requested
+        tint=collect(floor(minimum(t)-Dates.Day(1), Dates.Day):Dates.Minute(1):ceil(maximum(t)+Dates.Day(1), Dates.Day));
 
-    #predict tide
-    sl=ut_reconstr1(tint,coef,opt);
+        #predict tide
+        sl=ut_reconstr1(tint,coef,opt);
 
-    #Find local extrema
-    HTind=findlocalmaxima(sl);
-    LTind=findlocalminima(sl);
+        #Find local extrema
+        HTind=findlocalmaxima(sl);
+        LTind=findlocalminima(sl);
 
-    #Use only extrem between the dates initially selected
-    if length(t)==1
+        #Use only extrem between the dates initially selected
+        if length(t)==1
+            #
+            index=(tint[HTind].>=floor(t, Dates.Day) .&  tint[HTind].<ceil(t, Dates.Day));
+            HTind=HTind[index];
+            index=(tint[LTind].>=floor(t, Dates.Day) .&  tint[LTind].<ceil(t, Dates.Day));
+            LTind=LDind[index];
+        else
+            #
+            index=(tint[HTind].>=t[1]) .& (tint[HTind].<=t[end]);
+            HTind=HTind[index];
+            index=(tint[LTind].>=t[1]) .& (tint[LTind].<=t[end]);
+            LTind=LTind[index];
+        end
+
         #
-        index=(tint[HTind].>=floor(t, Dates.Day) .&  tint[HTind].<ceil(t, Dates.Day));
-        HTind=HTind[index];
-        index=(tint[LTind].>=floor(t, Dates.Day) .&  tint[LTind].<ceil(t, Dates.Day));
-        LTind=LDind[index];
-    else
-        #
-        index=(tint[HTind].>=t[1]) .& (tint[HTind].<=t[end]);
-        HTind=HTind[index];
-        index=(tint[LTind].>=t[1]) .& (tint[LTind].<=t[end]);
-        LTind=LTind[index];
+        return tint[HTind],sl[HTind],tint[LTind],sl[LTind]
+
     end
 
-    #
-    return tint[HTind],sl[HTind],tint[LTind],sl[LTind]
+    function makelind(coef,opt)
+        #Fill-in lind array based on Coef.name.
+        constt,sat,shallow=load_Constants(opt.constfolder);
+        newlind=zeros(Int64,length(coef.Name));
+        for n=1:length(coef.Name)
+            index=findfirst(strip(coef.Name[n]).==constt.name)
+            if index==nothing
+                newlind[n]=1;
+            else
+                newlind[n]=index;
+            end
+
+        end
+        return newlind;
+
+    end
 
 end
+
+
 #Example
 #
 # opt=opt_s("C:\\Users\\bosserellec\\Documents\\GitHub\\Julia_mixbag\\",false,2.0,0.0,false,false,false,false,false)
