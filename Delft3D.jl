@@ -1,7 +1,7 @@
 module Delft3D
 
     import Printf, DelimitedFiles, NetCDF
-    export readdep,writedep,Get_curv_grid_XZ,writecurv2gmt
+    export readdep,writedep,Get_curv_grid_XZ,Save_curv_grid_XZ,writecurv2gmt
 
     # Function to write md files (next gen?)
     function writedep(z,filename)
@@ -80,7 +80,7 @@ module Delft3D
         end
     end
 
-    function Get_curv_grid_XZ(ncfile,var,outname,step,lev)
+    function Get_curv_grid_XZ(ncfile,var,step,lev)
         #println("This code assumes you have a bathymetry file called trim-2008_TideCorr.nc in your working directory")
         #ncfile="trim-2008_TideCorr.nc" #"D:\\Projects\\Port_Otago\\2008\\D3D\\trim-2008_TideCorr.nc"
         #println("The output file will be called D3dmeshtoplot.gmt in your working directory")
@@ -107,6 +107,18 @@ module Delft3D
         #Get mask info
         mask=NetCDF.ncread(ncfile,"KCS", start=[1,1], count = [-1,-1]);
 
+        return X,Y,Z,mask
+    end
+
+    function Save_curv_grid_XZ(ncfile,var,outname,step,lev)
+        #println("This code assumes you have a bathymetry file called trim-2008_TideCorr.nc in your working directory")
+        #ncfile="trim-2008_TideCorr.nc" #"D:\\Projects\\Port_Otago\\2008\\D3D\\trim-2008_TideCorr.nc"
+        #println("The output file will be called D3dmeshtoplot.gmt in your working directory")
+        #outname="D3dmeshtoplot.gmt" #"D:\\Projects\\Port_Otago\\Bathy\\D3dmeshtoplot.gmt"
+
+        #var="DPS0"
+        X,Y,Z,mask=Get_curv_grid_XZ(ncfile,var,step,lev)
+
         writecurv2gmt(X,Y,Z,mask,outname)
         # si=size(X);
         # nx=si[1];
@@ -128,11 +140,17 @@ module Delft3D
         # end
     end
 
-    function Get_curv_grid_XZ(ncfile,var,outname)
-        Get_curv_grid_XZ(ncfile,var,outname,1,1);
+    function Save_curv_grid_XZ(ncfile,var,outname)
+        Save_curv_grid_XZ(ncfile,var,outname,1,1);
     end
-    function Get_curv_grid_XZ(ncfile,var,outname,step)
-        Get_curv_grid_XZ(ncfile,var,outname,step,1);
+    function Save_curv_grid_XZ(ncfile,var,outname,step)
+        Save_curv_grid_XZ(ncfile,var,outname,step,1);
+    end
+    function Get_curv_grid_XZ(ncfile,var)
+        Get_curv_grid_XZ(ncfile,var,1,1);
+    end
+    function Get_curv_grid_XZ(ncfile,var,step)
+        Get_curv_grid_XZ(ncfile,var,step,1);
     end
 
 

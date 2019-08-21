@@ -1,7 +1,7 @@
 module junkinthetrunk
 
     import StatsBase, NetCDF, Dates
-    export nanmean, write2nc, pol2cart, interp1, nearneighb1
+    export nanmean, write2nc, pol2cart, interp1, nearneighb1, skills
 
 
     #nanmean does a mean while ignoring nans
@@ -60,7 +60,7 @@ module junkinthetrunk
         y = zeros(length(newx))
         for n = 1:length(newx)
             index = findfirst(xA .> newx[n]);
-            if isnothing(index)
+            if index==nothing
                 if newx[n] <= xA[1]
                     index = 1;
                 elseif newx[n] >= xA[end]
@@ -119,6 +119,33 @@ module junkinthetrunk
         NetCDF.ncwrite(z,ncfile,"z");
         NetCDF.ncclose(ncfile);
     end
+
+    function skills(tmeas,xmeas,tmodel,xmodel)
+        # Calculate RMS. Bias, Index of agreement, and skill score
+        #
+
+        #crop non overlapping
+        index=(tmodel.>=tmeas[1]) .& (tmodel.<=tmeas[end]);
+
+        tmod=tmodel[index];
+        xmod=xmodel[index];
+
+        indxmea=(tmeas.>=tmod[1]) .& (tmeas.<=tmod[end]);
+        tmea=tmeas[indxmea];
+        xmea=xmeas[indxmea];
+
+
+        xint=interp1(tmod,xmod,tmea);
+
+
+        RMS=sqrt(StatsBase.mean((xint.-xmea).^2));
+        Bias=StatsBase.mean(xint)-StatsBase.mean(xmea);
+        Wcorr=1-(sum((xmea-xint).^2)/(sum((abs.(xmea.-StatsBase.mean(xint)).+abs.(xint.-StatsBase.mean(xint))).^2)));
+        Bss=1-(StatsBase.var((xmea-xint))/(StatsBase.var((xint.-StatsBase.mean(xint)))));
+
+        return RMS,Bias,Wcorr,Bss
+    end
+
 
 
 # open(outname,"w") do io
