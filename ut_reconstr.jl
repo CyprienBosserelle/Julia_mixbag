@@ -1,6 +1,6 @@
 module ut_reconstr
-import Dates, DelimitedFiles
-export coef_s,opt_s,makelind,ut_reconstr1,Predicttidetime
+import Dates, DelimitedFiles, NetCDF, Statistics, ProgressMeter
+export coef_s,opt_s,makelind,ut_reconstr1,Predicttidetime,Readharmonicsnc,exceedencecurve
 
     struct shallow_s
         iconst
@@ -455,8 +455,87 @@ export coef_s,opt_s,makelind,ut_reconstr1,Predicttidetime
         return newlind;
 
     end
+    function Readharmonicsnc(ncfile, constfolder)
+        #Read harmonics data and metadata from Netcdf file
+        #ncfile="D:\\Projects\\Tonga\\Waterlevel\\NiuatoputapuTideCst-d.nc"
+        NamesChar = string.(strip.(NetCDF.nc_char2string(NetCDF.ncread(ncfile,"Name"))));
+        # Convert NETCDF ASCII CHAR TO Strings
+
+
+        A = NetCDF.ncread(ncfile,"A");
+        A_ci = NetCDF.ncread(ncfile,"A_ci");
+        g = NetCDF.ncread(ncfile,"g");
+        g_ci = NetCDF.ncread(ncfile,"g_ci");
+        freq = NetCDF.ncread(ncfile,"freq");
+
+        MSL=NetCDF.ncgetatt(ncfile, "Global", "MSL")
+        trend=NetCDF.ncgetatt(ncfile, "Global", "trend")
+        reftime=Dates.DateTime(NetCDF.ncgetatt(ncfile, "Global", "reftime"))
+        Lat=NetCDF.ncgetatt(ncfile, "Global", "Latitude")
+
+        tempcoef=coef_s(NamesChar,A,A_ci,g,g_ci,freq,zeros(length(freq)),MSL,trend,Lat,reftime)
+        #opt=opt_s("D:\\Projects\\Tonga\\tonga-ocean-forecasting-tools\\Tide-Calendars\\",false,2.0,0.0,false,false,false,false,false)
+        opt=opt_s(constfolder,false,2.0,0.0,false,false,false,false,false)
+
+        linds=makelind(tempcoef,opt);
+
+        return coef_s(NamesChar,A,A_ci,g,g_ci,freq,linds,MSL,trend,Lat,reftime)
+
+
+
+    end
+
+    function exceedencecurve(coef,opt,nyear)
+        # Calculate 100-year tidal exceedence curve for High tide and low tide based on tide constituents
+        # return 2 vector of tidal exceedance for every percentile with 0:1:100
+        # WARNING this analysis may take a while
+
+
+        # HTLTall = Float64[]
+        #
+        #
+        HTall = Float64[];
+        LTall = Float64[];
+
+        HTexcurve=zeros(101);
+        LTexcurve=zeros(101);
+
+        ProgressMeter.@showprogress 1 "Calculating tide exceedance..." for year=2000:(2000+nyear)
+             t=[Dates.DateTime(year,01,01,0,0,0) Dates.DateTime(year,12,31,23,59,59)];
+
+             HT,Hlev,LT,Llev=Predicttidetime(t,coef,opt);
+             for a in Hlev
+                 push!(HTall,a)
+             end
+             for a in Llev
+                 push!(LTall,a)
+             end
+
+        end
+
+        #
+        HTexcurve[101]=maximum(HTall);
+        HTexcurve[1]=minimum(HTall);
+        for n=1:99
+            HTexcurve[n+1]=Statistics.quantile(HTall,n/100);
+        end
+        LTexcurve[101]=maximum(LTall);
+        LTexcurve[1]=minimum(LTall);
+        for n=1:99
+            LTexcurve[n+1]=Statistics.quantile(LTall,n/100);
+        end
+
+        return HTexcurve,LTexcurve;
+    end
+    function exceedencecurve(coef,opt)
+        return exceedencecurve(coef,opt,18);
+    end
+
+
 
 end
+
+
 
 
 #Example
