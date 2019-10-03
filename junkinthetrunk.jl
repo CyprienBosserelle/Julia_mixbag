@@ -1,12 +1,77 @@
 module junkinthetrunk
 
     import StatsBase, NetCDF, Dates
-    export nanmean, write2nc, pol2cart, interp1, nearneighb1, skills
+    export nanmean, write2nc, pol2cart, interp1, nearneighb1, bilinearinterpUG, skills
 
 
     #nanmean does a mean while ignoring nans
     nanmean(x) = StatsBase.mean(filter(!isnan,x))
     nanmean(x,y) = mapslices(nanmean,x,y)
+
+    function bilinearinterpBase(q11,q12,q21,q22,x1,x2,y1,y2,x,y)
+        x2x1 = x2 - x1;
+		y2y1 = y2 - y1;
+		x2x = x2 - x;
+		y2y = y2 - y;
+		yy1 = y - y1;
+		xx1 = x - x1;
+		return 1.0 / (x2x1 * y2y1) * (q11 * x2x * y2y +	q21 * xx1 * y2y + q12 * x2x * yy1 +	q22 * xx1 * yy1	);
+	end
+
+	function bilinearinterpUG(xgrid,ygrid,zb,x,y)
+		#Bilinearinterpolation on a regular (non-uniform) grid
+		#xgrid and ygrid are expected to be vectors
+		xmax=xgrid[end];
+		xo=xgrid[1];
+		ymax=ygrid[end];
+		yo=ygrid[1];
+
+		nx=length(xgrid);
+		ny=length(ygrid);
+
+		# Extrapolation safeguard
+		x = max(min(x, xmax), xo);
+		y = max(min(y, ymax), yo);
+
+		xdiff=x.-xgrid;
+		cfi=argmin(abs.(xdiff));
+
+		if(xdiff[cfi]>0.)
+			cfi=cfi-1;
+		end
+
+		cfi=min(max(cfi, 1), nx - 1);
+
+		cfip = cfi + 1;
+
+		x1 = xgrid[cfi];
+		x2 = xgrid[cfip];
+
+		ydiff=y.-ygrid;
+		cfj=argmin(abs.(ydiff));
+		if(ydiff[cfj]>0.)
+			cfj=cfj-1;
+		end
+
+		cfj=min(max(cfj, 1), ny - 1);
+
+		cfjp = cfj + 1;
+
+		y1 = ygrid[cfj];
+		y2 = ygrid[cfjp];
+
+		q11 = zb[cfi,cfj];
+		q12 = zb[cfi,cfjp];
+		q21 = zb[cfip,cfj];
+		q22 = zb[cfip,cfjp];
+
+		return bilinearinterpBase(q11,q12,q21,q22,x1,x2,y1,y2,x,y);
+	end
+
+
+
+
+
 
     #cart2pol
     function pol2cart(theta,speed)
