@@ -77,7 +77,7 @@ module BG
             #indexrx=x.>fill(rightedge,size(x));
             indexz=argmin(abs.(x.-fill(rightedge,size(x))));
             indexz=min(indexz,length(x)-1);
-            rgedgetopo=topo[indexz],:];
+            rgedgetopo=topo[indexz,:];
 
             for n=(indexz+1):length(x)
                 toponew[n,:]=rgedgetopo;
@@ -89,7 +89,7 @@ module BG
             # indexry=y.>fill(topedge,size(y));
             indexz=argmin(abs.(y.-fill(topedge,size(y))));
             indexz=min(indexz,length(y)-1);
-            toedgetopo=topo[:,indexz]];
+            toedgetopo=topo[:,indexz];
             for n=(indexz+1):length(y)
                 toponew[:,n]=toedgetopo;
             end
