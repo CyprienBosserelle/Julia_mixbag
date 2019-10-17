@@ -1,3 +1,12 @@
+"""
+    junkinthetrunk module
+    Collection of random usefull functions
+
+    Available functions:
+    nanmean, write2nc, pol2cart, interp1, nearneighb1, bilinearinterpUG, skills
+
+    
+"""
 module junkinthetrunk
 
     import StatsBase, NetCDF, Dates
