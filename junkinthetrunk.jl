@@ -5,7 +5,7 @@
     Available functions:
     nanmean, write2nc, pol2cart, interp1, nearneighb1, bilinearinterpUG, skills
 
-    
+
 """
 module junkinthetrunk
 
@@ -14,8 +14,13 @@ module junkinthetrunk
 
 
     #nanmean does a mean while ignoring nans
+	"""
+	    average of a vector ignoring NaNs
+	    usage nanmean(x)
+	"""
     nanmean(x) = StatsBase.mean(filter(!isnan,x))
     nanmean(x,y) = mapslices(nanmean,x,y)
+
 
     function bilinearinterpBase(q11,q12,q21,q22,x1,x2,y1,y2,x,y)
         x2x1 = x2 - x1;
@@ -27,6 +32,12 @@ module junkinthetrunk
 		return 1.0 / (x2x1 * y2y1) * (q11 * x2x * y2y +	q21 * xx1 * y2y + q12 * x2x * yy1 +	q22 * xx1 * yy1	);
 	end
 
+	"""
+		Bilinearinterpolation on a regular (non-uniform) grid
+
+		Usage: z=bilinearinterpUG(xgrid,ygrid,zb,x,y)
+		xgrid and ygrid are expected to be vectors
+	"""
 	function bilinearinterpUG(xgrid,ygrid,zb,x,y)
 		#Bilinearinterpolation on a regular (non-uniform) grid
 		#xgrid and ygrid are expected to be vectors
@@ -194,6 +205,12 @@ module junkinthetrunk
         NetCDF.ncclose(ncfile);
     end
 
+
+    """
+        Evaluate a model skills
+		usage:
+        RMS,Bias,Wcorr,Bss=skills(tmeas,xmeas,tmodel,xmodel)
+    """
     function skills(tmeas,xmeas,tmodel,xmodel)
         # Calculate RMS. Bias, Index of agreement, and skill score
         #

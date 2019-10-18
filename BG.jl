@@ -98,6 +98,14 @@ module BG
         return toponew
     end
 
+
+    """
+        #replace Nans in a grid with values from another grid even if the second grid has a different domain and resolution
+
+        Usage:
+        patchgrids(xgridprimary,ygridprimary,zgridprimary,xgridsecondary,ygridsecondary,zgridsecondary)
+
+    """
     function patchgrids(xgridprimary,ygridprimary,zgridprimary,xgridsecondary,ygridsecondary,zgridsecondary)
         #replace Nans in a grid with values from another grid even if the second grid has a different domain and resolution
         for i=1:length(xgridprimary)
