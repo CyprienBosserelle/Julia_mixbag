@@ -3,14 +3,14 @@
     Collection of random usefull functions
 
     Available functions:
-    nanmean, write2nc, pol2cart, interp1, nearneighb1, bilinearinterpUG, skills
+    nanmean, write2nc, pol2cartCompass, interp1, nearneighb1, bilinearinterpUG, skills
 
 
 """
 module junkinthetrunk
 
     import StatsBase, NetCDF, Dates
-    export nanmean, write2nc, pol2cart, interp1, nearneighb1, bilinearinterpUG, skills
+    export nanmean, write2nc, pol2cartCompass, cart2polCompass, interp1, nearneighb1, bilinearinterpUG, skills
 
 
     #nanmean does a mean while ignoring nans
@@ -94,11 +94,19 @@ module junkinthetrunk
 
 
     #cart2pol
-    function pol2cart(theta,speed)
-         ee=speed*cosd(90-theta);
-         nn=speed.*sind(90-theta);
+    function pol2cartCompass(theta,speed)
+         ee=speed*cosd(90.0 .- theta);
+         nn=speed.*sind(90.0 .- theta);
          return ee,nn;
      end
+
+	 function cart2polCompass(ee,nn)
+		 speed=hypot.(ee,nn);
+		 theta=90.0 .- rad2deg.(atan.(nn,ee));;
+          return speed,theta;
+      end
+
+
 
     interptime(next,prev,timenext,time)=prev + (time) / (timenext)*(next - prev);
 
