@@ -12,7 +12,7 @@
 module BG
 
     import Printf, NetCDF, junkinthetrunk
-    export SetEdges, patchgrids
+    export SetEdges, patchgrids, Nestedges
 
     # Function to write md files (next gen?)
     """
@@ -121,6 +121,121 @@ module BG
             end
         end
         return zgridprimary
+    end
+
+    """
+        Set the edges but for nesting conditions
+        Take the secondary bathy data and put it on the edge of the primary DEM and across the buffer
+    """
+    function Nestedges(xgridprimary,ygridprimary,zgridprimary,xgridsecondary,ygridsecondary,zgridsecondary,LBRT,buffer)
+        toponew =copy(zgridprimary);
+
+
+
+        if(LBRT[1])
+
+            leftedge=xgridprimary[1]+buffer*(xgridprimary[end]-xgridprimary[1]);
+            indexz=argmin(abs.(xgridprimary.-fill(leftedge,size(xgridprimary))));
+            indexz=max(indexz,2);
+
+
+            rgedgetopo=zgridprimary[indexz,:]; #Fill first with original data
+            i=1;
+            for j=1:length(ygridprimary)
+
+                    if (xgridprimary[i]>=xgridsecondary[1]) & (xgridprimary[i]<=xgridsecondary[end]) & (ygridprimary[j]>=ygridsecondary[1]) & (xgridprimary[i]>=xgridsecondary[1]) & (ygridprimary[j]<=ygridsecondary[end])
+                        #Interpolate to the nearest values
+                        rgedgetopo[j]=junkinthetrunk.bilinearinterpUG(xgridsecondary,ygridsecondary,zgridsecondary,xgridprimary[i],ygridprimary[j]);
+
+
+                    end
+
+            end
+
+            for n=1:(indexz-1)
+                toponew[n,:]=rgedgetopo;
+            end
+
+
+            #
+        end
+        if(LBRT[2])
+
+            botedge=ygridprimary[1]+buffer*(ygridprimary[end]-ygridprimary[1]);
+
+            indexz=argmin(abs.(ygridprimary.-fill(botedge,size(ygridprimary))));
+            indexz=max(indexz,2);
+            rgedgetopo=zgridprimary[:,indexz];
+
+            j=1;
+            for i=1:length(xgridprimary)
+
+                    if (xgridprimary[i]>=xgridsecondary[1]) & (xgridprimary[i]<=xgridsecondary[end]) & (ygridprimary[j]>=ygridsecondary[1]) & (xgridprimary[i]>=xgridsecondary[1]) & (ygridprimary[j]<=ygridsecondary[end])
+                        #Interpolate to the nearest values
+                        rgedgetopo[i]=junkinthetrunk.bilinearinterpUG(xgridsecondary,ygridsecondary,zgridsecondary,xgridprimary[i],ygridprimary[j]);
+
+
+                    end
+
+            end
+
+            for n=1:(indexz-1)
+                toponew[:,n]=rgedgetopo;
+            end
+        end
+        if(LBRT[3])
+
+            rightedge=xgridprimary[end]-buffer*(xgridprimary[end]-xgridprimary[1]);
+
+            indexz=argmin(abs.(xgridprimary.-fill(rightedge,size(xgridprimary))));
+            indexz=min(indexz,length(xgridprimary)-1);
+            rgedgetopo=zgridprimary[indexz,:];
+
+            i=length(xgridprimary);
+            for j=1:length(ygridprimary)
+
+                    if (xgridprimary[i]>=xgridsecondary[1]) & (xgridprimary[i]<=xgridsecondary[end]) & (ygridprimary[j]>=ygridsecondary[1]) & (xgridprimary[i]>=xgridsecondary[1]) & (ygridprimary[j]<=ygridsecondary[end])
+                        #Interpolate to the nearest values
+                        rgedgetopo[j]=junkinthetrunk.bilinearinterpUG(xgridsecondary,ygridsecondary,zgridsecondary,xgridprimary[i],ygridprimary[j]);
+
+
+                    end
+
+            end
+
+            for n=(indexz+1):length(xgridprimary)
+                toponew[n,:]=rgedgetopo;
+            end
+        end
+        if(LBRT[4])
+            topedge=ygridprimary[end]-buffer*(ygridprimary[end]-ygridprimary[1]);
+
+            indexz=argmin(abs.(ygridprimary.-fill(topedge,size(ygridprimary))));
+            indexz=min(indexz,length(ygridprimary)-1);
+            toedgetopo=zgridprimary[:,indexz];
+
+            j=length(ygridprimary);
+            for i=1:length(xgridprimary)
+
+                    if (xgridprimary[i]>=xgridsecondary[1]) & (xgridprimary[i]<=xgridsecondary[end]) & (ygridprimary[j]>=ygridsecondary[1]) & (xgridprimary[i]>=xgridsecondary[1]) & (ygridprimary[j]<=ygridsecondary[end])
+                        #Interpolate to the nearest values
+                        rgedgetopo[i]=junkinthetrunk.bilinearinterpUG(xgridsecondary,ygridsecondary,zgridsecondary,xgridprimary[i],ygridprimary[j]);
+
+
+                    end
+                
+            end
+
+
+            for n=(indexz+1):length(ygridprimary)
+                toponew[:,n]=toedgetopo;
+            end
+        end
+
+        return toponew
+
+
+
     end
 
 
