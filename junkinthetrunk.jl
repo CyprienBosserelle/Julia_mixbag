@@ -18,9 +18,18 @@ module junkinthetrunk
 	    average of a vector ignoring NaNs
 	    usage nanmean(x)
 	"""
+
     nanmean(x) = StatsBase.mean(filter(!isnan,x))
     nanmean(x,y) = mapslices(nanmean,x,y)
 
+	function nanmedian(x)
+		y=filter(!isnan,x);
+		if !isempty(y)
+			return StatsBase.median(filter(!isnan,x))
+		else
+			return NaN
+		end
+	end
 
     function bilinearinterpBase(q11,q12,q21,q22,x1,x2,y1,y2,x,y)
         x2x1 = x2 - x1;

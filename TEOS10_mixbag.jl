@@ -5,7 +5,7 @@ module TEOS10_mixbag
     function o2sat(SP, CT)
 
         #x = gsw_SP_from_SA(SA,p);
-        x = SP;
+        x = SP;#practical salinity
         pt = CT;#gsw_pt_from_CT(SA,CT); # pt is potential temperature referenced to
                                     # the sea surface.
         pt68 = pt .* 1.00024; # pt68 is the potential temperature in degress C on
