@@ -3,14 +3,14 @@
     Collection of random usefull functions
 
     Available functions:
-    nanmean, write2nc, pol2cartCompass, interp1, nearneighb1, bilinearinterpUG, skills
+    nanmean, nanmedian,write2nc, pol2cartCompass, interp1, nearneighb1, bilinearinterpUG, skills, sinwave
 
 
 """
 module junkinthetrunk
 
     import StatsBase, NetCDF, Dates
-    export nanmean, write2nc, pol2cartCompass, cart2polCompass, interp1, nearneighb1, bilinearinterpUG, skills
+    export nanmean, nanmedian, write2nc, pol2cartCompass, cart2polCompass, interp1, nearneighb1, bilinearinterpUG, skills, sinwave
 
 
     #nanmean does a mean while ignoring nans
@@ -18,7 +18,6 @@ module junkinthetrunk
 	    average of a vector ignoring NaNs
 	    usage nanmean(x)
 	"""
-
     nanmean(x) = StatsBase.mean(filter(!isnan,x))
     nanmean(x,y) = mapslices(nanmean,x,y)
 
@@ -29,6 +28,27 @@ module junkinthetrunk
 		else
 			return NaN
 		end
+	end
+
+	function sinwave(timevector, amplitude, period, phasedalayinsec, datumshift)
+
+		ttt=timevector
+		A=amplitude;
+
+		T=period;#12.8*3600.0
+
+		B=2.0*pi/(T);
+		C=phasedalayinsec; # time delay
+		D=datumshift; # Datum shift
+
+
+		return A.*sin.(B.*(ttt.+C)).+D;
+	end
+	function sinwave(timevector, period)
+		return sinwave(timevector, 1.0, period, 0.0, 0.0);
+	end
+	function sinwave(timevector, amplitude, period)
+		return sinwave(timevector, amplitude, period, 0.0, 0.0);
 	end
 
     function bilinearinterpBase(q11,q12,q21,q22,x1,x2,y1,y2,x,y)
