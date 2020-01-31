@@ -5,7 +5,6 @@
     Available functions:
     nanmean, nanmedian,write2nc, pol2cartCompass, interp1, nearneighb1, bilinearinterpUG, skills, sinwave
 
-    This was written by Cyprien bosserelle
 """
 module junkinthetrunk
 
