@@ -5,7 +5,7 @@
     Available functions:
     nanmean, nanmedian,write2nc, pol2cartCompass, interp1, nearneighb1, bilinearinterpUG, skills, sinwave
 
-
+    This was written by Cyprien bosserelle
 """
 module junkinthetrunk
 
@@ -29,7 +29,13 @@ module junkinthetrunk
 			return NaN
 		end
 	end
-
+	"""
+	    produce a sinusoidal wave for
+	    usage:
+		Waterlevel=sinwave(timevector, amplitude, period, phasedalayinsec, datumshift)
+		period and phase delay are in sec
+		timevector is expected to be a vector of doubles
+	"""
 	function sinwave(timevector, amplitude, period, phasedalayinsec, datumshift)
 
 		ttt=timevector
