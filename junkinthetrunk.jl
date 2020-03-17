@@ -3,13 +3,13 @@
     Collection of random usefull functions
 
     Available functions:
-    nanmean, nanmedian,write2nc, pol2cartCompass, interp1, nearneighb1, bilinearinterpUG, skills, sinwave
+    nanmean, nanmedian, write2nc, pol2cartCompass, cart2polCompass, interp1, nearneighb1, bilinearinterpUG, skills, sinwave, Gaussian
 
 """
 module junkinthetrunk
 
     import StatsBase, NetCDF, Dates
-    export nanmean, nanmedian, write2nc, pol2cartCompass, cart2polCompass, interp1, nearneighb1, bilinearinterpUG, skills, sinwave
+    export nanmean, nanmedian, write2nc, pol2cartCompass, cart2polCompass, interp1, nearneighb1, bilinearinterpUG, skills, sinwave, Gaussian
 
 
     #nanmean does a mean while ignoring nans
@@ -54,6 +54,17 @@ module junkinthetrunk
 	end
 	function sinwave(timevector, amplitude, period)
 		return sinwave(timevector, amplitude, period, 0.0, 0.0);
+	end
+	"""
+	    produce a gaussian wave for
+	    usage:
+		Waterlevel=Gaussian(timevector,amplitude,position,width)
+		timevector is expected to be a vector of doubles
+	"""
+	function Gaussian(x,a,b,c)
+	    u=x-b;
+	    up=-1.0*u*u/(2*c*c);
+	    return a*exp.(up);
 	end
 
     function bilinearinterpBase(q11,q12,q21,q22,x1,x2,y1,y2,x,y)
@@ -232,7 +243,7 @@ module junkinthetrunk
 
 
     #write2nc writes a matrix to netcdf file
-    function write2nc(x,y,z,ncfile)
+    function write2nc(x,y,z,ncfile,varnames)
 
         xatts = Dict("longname" => "eastings",
           "units"    => "m")
@@ -240,12 +251,16 @@ module junkinthetrunk
                   "units"    => "m")
         varatts = Dict("longname" => "Topo / Bathy above MVD53",
                   "units"    => "m")
-        NetCDF.nccreate(ncfile,"z","x",x,xatts,"y",y,yatts,atts=varatts)
-        NetCDF.ncwrite(x,ncfile,"x");
-        NetCDF.ncwrite(y,ncfile,"y");
-        NetCDF.ncwrite(z,ncfile,"z");
+        NetCDF.nccreate(ncfile,varnames[3],varnames[1],x,xatts,varnames[2],y,yatts,atts=varatts)
+        NetCDF.ncwrite(x,ncfile,varnames[1]);
+        NetCDF.ncwrite(y,ncfile,varnames[2]);
+        NetCDF.ncwrite(z,ncfile,varnames[3]);
         NetCDF.ncclose(ncfile);
     end
+	function write2nc(x,y,z,ncfile)
+		varnames=["x","y","z"];
+		write2nc(x,y,z,ncfile,varnames)
+	end
 
 
     """
