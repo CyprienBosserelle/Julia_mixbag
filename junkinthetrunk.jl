@@ -294,6 +294,44 @@ module junkinthetrunk
         return RMS,Bias,Wcorr,Bss
     end
 
+	"""
+        Detrend a serie
+		(Safe-ish with NaN) 
+		usage:
+		y=detrend(x) or y=detrend(x,bp) where bp is idex of breakpoints
+
+    """
+	function detrend(s,bp)
+
+	    x=copy(s)
+
+	    bp=1
+
+	    # make sure you ignore the NANs
+	    mmean=nanmean(x);
+	    if any(isnan.(x))
+	        x[isnan.(x)].=mmean;
+	    end
+
+	    N = size(x,1);
+	    bp = unique([1; bp; N]);   # Include both endpoints
+	    bp = bp[bp .>= 1 .& bp .<=N];   # Should error in the future
+	    lbp = length(bp);
+	    #Build regressor with linear pieces + DC
+	    a = zeros(N,lbp);
+	    a[1:N,1] = collect(1:N)./N;
+	    for k = 2:(lbp-1)
+	        M = N - bp[k];
+	        global a[(bp[k]+1):end,k] = (1:M)./M;
+	    end
+	    a[1:N,end] .= 1;
+	    y = s - a*(a\x);
+
+	    return y
+	end
+	function detrend(x)
+	    return detrend(x,1);
+	end
 
 
 # open(outname,"w") do io
