@@ -323,11 +323,15 @@ module TEOS10_mixbag
 	    # specvol: specific volume                                 [m^3/kg]
 
 	    #Define "some" constant
-	    sfac = 0.0248826675584615;                   # sfac = 1/(40*(35.16504/35)).
-	    offset = 5.971840214030754e-1;                      # offset = deltaS*sfac.
+	    #sfac = 0.0248826675584615;
+
+        sfac = 1/(40*(35.16504/35)) ;                  # sfac = 1/(40*(35.16504/35)).
+	    # offset = 5.971840214030754e-1;
+		deltaS = 24;
+		offset = deltaS*sfac                      # offset = deltaS*sfac.
 
 	    x2 = sfac.*sa;
-	    xs = sqrt(x2 + offset);
+	    xs = sqrt.(x2 .+ offset);
 	    ys = ct.*0.025;
 	    z = p.*1e-4;
 
@@ -407,7 +411,7 @@ module TEOS10_mixbag
 	    v510 =  1.3864594581e-6;
 	    v600 =  3.1932457305e-5;
 
-	    specvol = v000 + xs.*(v100 + xs.*(v200 + xs.*(v300 + xs.*(v400 + xs.*(v500 + xs.*v600)))))
+	    specvol = (v000 + xs.*(v100 + xs.*(v200 + xs.*(v300 + xs.*(v400 + xs.*(v500 + xs.*v600)))))
 	       + ys.*(v010 + xs.*(v110 + xs.*(v210 + xs.*(v310 + xs.*(v410 + xs.*v510))))
 	       + ys.*(v020 + xs.*(v120 + xs.*(v220 + xs.*(v320 + xs.*v420)))
 	       + ys.*(v030 + xs.*(v130 + xs.*(v230 + xs.*v330))
@@ -431,7 +435,8 @@ module TEOS10_mixbag
 	    + z.*(    v004 + xs.*v104
 	       + ys.*v014
 	    + z.*(    v005
-	    + z.*v006)))));
+	    + z.*v006)))))
+		)
 
 
 
