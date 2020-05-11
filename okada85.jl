@@ -1,43 +1,25 @@
-###########################
-## Okada 1985
 
-using NetCDF
-using Plots
-File="Bathy_model.nc";
+"""
+    Okada 1985 Surface deformation due to a finite rectangular source.
 
+	Okada85(E,N,DEPTH,STRIKE,DIP,LENGTH,WIDTH,RAKE,SLIP,OPEN)
 
-EE=ncread(File,"x");
-NN=ncread(File,"y");
+	Work in progress...
+	uE,uN,uZ = OKADA85(...) displacements only;
 
+	References:
+	   Aki K., and P. G. Richards, Quantitative seismology, Freemann & Co,
+	     New York, 1980.
+	   Okada Y., Surface deformation due to shear and tensile faults in a
+	     half-space, Bull. Seismol. Soc. Am., 75:4, 1135-1154, 1985.
 
-E=EE*ones(size(NN))'
-N=collect(transpose(NN*ones(size(EE))'))
+	Copyright (c) 1997-2012, François Beauducel, covered by BSD License.
+	Translated from Matlab to Julia By Cyprien Bosserelle 2020
 
-xf=389529;#[389529 346996 346996];
-yf=8284999#[8284999 8229431 8229431];
-ddepth=18.0#[18.0 18.0 18.0];
+"""
+module Okada85
 
-
-
-slipTI=10.0#[10.00 4.62 4.71];
-ddip=65.0#[65 29 29];
-# rrake=[265 90 90];
-# sstrike=[324 175 180];
-rrake=-91#[-91 90 90];
-sstrike=144#[144 175 180];
-xinc=130#[130 50 50];
-yinc=30#[30 75 75];
-
-ef=(E.-xf)./1000;#spheriq_dist(E,lat,lon,lat).*facef/1000;
-nf=(N.-yf)./1000;#spheriq_dist(lon,N,lon,lat).*facnf/1000;%-5000:10:5000;
-
-
-#[uE,uN,uZ] = okada85(ef,nf,Depth,strike,dip,lengthg,width,rake,slip,open)
-uE,uN,uZ=Okada85(ef,nf,ddepth,sstrike,ddip,xinc,yinc,rrake,slipTI,0)
-
-heatmap(uZ)
-
-
+	export Okada85
 
 #	Translated to Julia By Cyprien Bosserelle 2020
 #	References:
