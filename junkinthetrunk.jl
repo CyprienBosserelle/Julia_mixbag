@@ -194,6 +194,9 @@ module junkinthetrunk
         #yA=error[indnonan]
         #newx=copy(ttt)
 
+		xA=vec(xA);
+	    yA=vec(yA); 
+
 
         y = zeros(length(newx))
         for n = 1:length(newx)
