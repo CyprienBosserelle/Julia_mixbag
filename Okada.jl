@@ -19,7 +19,7 @@
 """
 module Okada
 
-	export Okada85
+	export Okada85,testOkada
 
 	#	Translated to Julia By Cyprien Bosserelle 2020
 	#	References:
@@ -139,7 +139,7 @@ module Okada
 		on a regular grid from -10 to 10, and North displacements are plotted as a
 		surface.
 
-		
+
 		Author: François Beauducel <beauducel@ipgp.fr>
 		   Institut de Physique du Globe de Paris
 		Created: 1997
@@ -225,34 +225,40 @@ module Okada
 
 
 	end
+	import Test
 
-	"""
-	# Notes for I... and K... subfunctions:
+	function testOkada()
+		# ###################
+		# ##### TEST
+		# ####################
+
+		# Expected results
+		check = [-8.689E-3,-4.298E-3,-2.747E-3,-1.220E-3,+2.470E-4,-8.191E-3,-5.814E-4,-5.175E-3,+2.945E-4]	# case 2 - strike
+	# -4.682E-3,-3.527E-2,-3.564E-2,-8.867E-3,-1.519E-4,+4.057E-3,-1.035E-2,+4.088E-3,+2.626E-3;	# case 2 - dip
+	# -2.660E-4,+1.056E-2,+3.214E-3,-5.655E-4,+1.993E-3,-1.066E-3,+1.230E-2,-3.730E-4,+1.040E-2;	# case 2 - tensile
+	#         0,+5.253E-3,        0,        0,-1.864E-2,-2.325E-3,        0,        0,+2.289E-2;	# case 3 - strike
+	#         0,        0,        0,        0,+2.748E-2,        0,        0,        0,-7.166E-2;	# case 3 - dip
+	# +1.223E-2,        0,-1.606E-2,-4.182E-3,        0,        0,-2.325E-3,-9.146E-3,        0;	# case 3 - tensile
+	#         0,-1.303E-3,        0,        0,+2.726E-3,+7.345E-4,        0,        0,-4.422E-3;	# case 4 - strike
+	#         0,        0,        0,        0,+5.157E-3,        0,        0,        0,-1.901E-2;	# case 4 - dip
+	# +3.507E-3,        0,-7.740E-3,-1.770E-3,        0,        0,-7.345E-4,-1.843E-3,        0];	# case 4 - tensile
 	#
-	#	1. original formulas use Lame's parameters as mu/(mu+lambda) which
-	#	   depends only on the Poisson's ratio = 1 - 2*nu
-	#	2. tests for cos(dip) == 0 are made with "cos(dip) > eps"
-	#	   because cos(90*pi/180) is not zero but = 6.1232e-17 (!)
-	#	   NOTE: don't use cosd and sind because of incompatibility
-	#	   with Matlab v6 and earlier...
-	"""
+		 x=2
+		 y=3
+		 d=4
+		 dip=70
+		 L=3
+		 W=2
+		 u3=0
+		 rake=0
+		 slip=1
+		#
+		#
+		ue,un,uz,uze,uzn,unn,une,uen,uee=Okada85(x-L/2,y-cosd(dip)*W/2,d-sind(dip)*W/2,90,dip,L,W,rake,slip,u3)
+		return Test.@test [ue,un,uz] ≈ check[1:3] atol=1.0e-6
 
 
-	# ###################
-	# ##### TEST
-	# ####################
-	# x=2
-	# y=3
-	# d=4
-	# dip=70
-	# L=3
-	# W=2
-	# u3=0
-	# rake=0
-	# slip=1
-	#
-	#
-	# Okada85(x-L/2,y-cosd(dip)*W/2,d-sind(dip)*W/2,90,dip,L,W,rake,slip,u3)
+
 	#
 	# xi=x
 	# eta=1
@@ -261,6 +267,20 @@ module Okada
 	# nu=0.25
 	#
 	# ux_ss(xi,eta,q,dip*pi/180,0.25)
+	end
+
+
+		"""
+		# Notes for I... and K... subfunctions:
+		#
+		#	1. original formulas use Lame's parameters as mu/(mu+lambda) which
+		#	   depends only on the Poisson's ratio = 1 - 2*nu
+		#	2. tests for cos(dip) == 0 are made with "cos(dip) > eps"
+		#	   because cos(90*pi/180) is not zero but = 6.1232e-17 (!)
+		#	   NOTE: don't use cosd and sind because of incompatibility
+		#	   with Matlab v6 and earlier...
+		"""
+
 
 	"""
 	 Chinnery's notation [equation (24) p. 1143]
