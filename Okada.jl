@@ -114,13 +114,6 @@ module Okada
 		      DIP=70, RAKE=90  : reverse fault
 		      DIP=70, RAKE=-90 : normal fault
 
-		It is also possible to produce partial outputs, with following syntax:
-		   [uE,uN,uZ] = OKADA85(...) for displacements only;
-		   [uE,uN,uZ,uZE,uZN] = OKADA85(...) for displacements and tilts;
-		   [uE,uN,uZ,uNN,uNE,uEN,uEE] = OKADA85(...) for displacements and strains;
-		   [uZE,uZN] = OKADA85(...) for tilts only;
-		   [uZE,uZN,uNN,uNE,uEN,uEE] = OKADA85(...) for tilts and strains;
-		   [uNN,uNE,uEN,uEE] = OKADA85(...) for strains only.
 
 		Note that vertical strain components can be obtained with following equations:
 		   uNZ = -uZN;
@@ -146,7 +139,7 @@ module Okada
 		on a regular grid from -10 to 10, and North displacements are plotted as a
 		surface.
 
-
+		
 		Author: François Beauducel <beauducel@ipgp.fr>
 		   Institut de Physique du Globe de Paris
 		Created: 1997
@@ -227,8 +220,8 @@ module Okada
 		uee = sin(strike).^2 .* uxx .- sin(2*strike).*(uyx .+ uxy)./2 .+ cos(strike).^2 .*uyy;
 
 
-		return ue,un,uz
-
+		return ue,un,uz,uze,uzn,unn,une,uen,uee
+# {ue, un, uz, uze, uzn, unn, une, uen, uee}
 
 
 	end
