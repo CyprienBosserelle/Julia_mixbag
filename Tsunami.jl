@@ -153,7 +153,7 @@ module Tsunami
         # move reference coordinates and depth
         # from bottom left corner (relative to the strike: for stroke of zero it is the south west corner, for stike of 180 it would be the north east corner)
         # to centroid of the fault plane
-        fault.depth=sind(fault.dip)*fault.width;
+        fault.depth=fault.depth+sind(fault.dip)*fault.width;
 
         # Moving to the centroid is a simple rotation problem
 
