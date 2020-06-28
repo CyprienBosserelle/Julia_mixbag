@@ -70,7 +70,7 @@ module Okada
 	#	ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 	#	POSSIBILITY OF SUCH DAMAGE.
 
-		
+
 
 	"""
 	OKADA85 Surface deformation due to a finite rectangular source.
@@ -159,7 +159,8 @@ module Okada
 		U2 = sin(rake).*slip;
 		# Converts fault coordinates (E,N,DEPTH) relative to centroid
 		# into Okada's reference system (X,Y,D)
-		d = depth + sin(dip).*W/2;	# d is fault's top edge
+		# d = depth + sin(dip).*W/2;	# d is fault's top edge
+		d = depth - sin(dip).*W/2;
 		ec = e .+ cos(strike).*cos(dip).*W/2;
 		nc = n .- sin(strike).*cos(dip).*W/2;
 		x = cos(strike).*nc .+ sin(strike).*ec .+ L/2;
