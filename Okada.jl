@@ -339,7 +339,7 @@ module Okada
 		 slip=1
 		#
 		#
-		ue,un,uz,uze,uzn,unn,une,uen,uee=Okada85(x-L/2,y-cosd(dip)*W/2,d-sind(dip)*W/2,90,dip,L,W,rake,slip,u3)
+		ue,un,uz,uze,uzn,unn,une,uen,uee=Okada85(x-L/2,y-cosd(dip)*W/2,d+sind(dip)*W/2,90,dip,L,W,rake,slip,u3)
 		return Test.@test [ue,un,uz] ≈ check[1:3] atol=1.0e-6
 
 
