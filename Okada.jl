@@ -310,6 +310,87 @@ module Okada
 
 
 	end
+	function Okada85Dis(e,n,depth,strike,dip,L,W,rake,slip,U3)
+
+		strike = strike*pi/180;	# converting STRIKE in radian
+		dip = dip*pi/180;	# converting DIP in radian ('delta' in Okada's equations)
+		rake = rake*pi/180;	#converting RAKE in radian
+		nu = 0.25;
+
+		# Defines dislocation in the fault plane system
+		U1 = cos(rake).*slip;
+		U2 = sin(rake).*slip;
+		# Converts fault coordinates (E,N,DEPTH) relative to centroid
+		# into Okada's reference system (X,Y,D)
+		# d = depth + sin(dip).*W/2;	# d is fault's top edge
+		d = depth - sin(dip).*W/2;	# d is fault's top edge
+		ec = e .+ cos(strike).*cos(dip).*W/2;
+		nc = n .- sin(strike).*cos(dip).*W/2;
+		x = cos(strike).*nc .+ sin(strike).*ec .+ L/2;
+		y = sin(strike).*nc .- cos(strike).*ec .+ cos(dip).*W;
+		# Variable substitution (independent from xi and eta)
+		p = y.*cos(dip) .+ d.*sin(dip);
+		q = y.*sin(dip) .- d.*cos(dip);
+
+		# Displacements
+		ux = ( -U1/(2*pi) .* chinnery_ux_ss.(x,p,L,W,q,dip,nu) # strike-slip
+			.- U2/(2*pi) .* chinnery_ux_ds.(x,p,L,W,q,dip,nu) # dip-slip
+			.+ U3/(2*pi) .* chinnery_ux_tf.(x,p,L,W,q,dip,nu)); # tensile fault
+
+		uy = ( -U1/(2*pi) .* chinnery_uy_ss.(x,p,L,W,q,dip,nu) # strike-slip
+			.- U2/(2*pi) .* chinnery_uy_ds.(x,p,L,W,q,dip,nu) # dip-slip
+			.+ U3/(2*pi) .* chinnery_uy_tf.(x,p,L,W,q,dip,nu)); # tensile fault
+
+		uz = ( -U1/(2*pi) .* chinnery_uz_ss.(x,p,L,W,q,dip,nu) # strike-slip
+			.- U2/(2*pi) .* chinnery_uz_ds.(x,p,L,W,q,dip,nu) # dip-slip
+			.+ U3/(2*pi) .* chinnery_uz_tf.(x,p,L,W,q,dip,nu)); # tensile fault
+		# # Rotation from Okada's axes to geographic
+		# ue = sin(strike).*ux .- cos(strike).*uy;
+		# un = cos(strike).*ux .+ sin(strike).*uy;
+		#
+		#
+		# # Tilt
+		# uzx =( -U1/(2*pi) .* chinnery_uzx_ss.(x,p,L,W,q,dip,nu) # strike-slip
+		# 	 .- U2/(2*pi) .* chinnery_uzx_ds.(x,p,L,W,q,dip,nu) # dip-slip
+		# 	 .+ U3/(2*pi) .* chinnery_uzx_tf.(x,p,L,W,q,dip,nu)); # tensile fault
+		#
+		# uzy =( -U1/(2*pi) .* chinnery_uzy_ss.(x,p,L,W,q,dip,nu) # strike-slip
+		# 	 .- U2/(2*pi) .* chinnery_uzy_ds.(x,p,L,W,q,dip,nu) # dip-slip
+		# 	 .+ U3/(2*pi) .* chinnery_uzy_tf.(x,p,L,W,q,dip,nu)); # tensile fault
+		#
+		# # Rotation from Okada's axes to geographic
+		# uze = -sin(strike).*uzx .+ cos(strike).*uzy;
+		# uzn = -cos(strike).*uzx .- sin(strike).*uzy;``
+		#
+		# # Strain
+		# uxx = ( -U1/(2*pi) .* chinnery_uxx_ss.(x,p,L,W,q,dip,nu) # strike-slip
+		# 		- U2/(2*pi) .* chinnery_uxx_ds.(x,p,L,W,q,dip,nu) # dip-slip
+		# 		+ U3/(2*pi) .* chinnery_uxx_tf.(x,p,L,W,q,dip,nu)); # tensile fault
+		#
+		# uxy = ( -U1/(2*pi) .* chinnery_uxy_ss.(x,p,L,W,q,dip,nu) # strike-slip
+		# 		.- U2/(2*pi) .* chinnery_uxy_ds.(x,p,L,W,q,dip,nu) # dip-slip
+		# 		.+ U3/(2*pi) .* chinnery_uxy_tf.(x,p,L,W,q,dip,nu)); # tensile fault
+		#
+		# uyx = ( -U1/(2*pi) .* chinnery_uyx_ss.(x,p,L,W,q,dip,nu) # strike-slip
+		# 	 .- U2/(2*pi) .* chinnery_uyx_ds.(x,p,L,W,q,dip,nu) # dip-slip
+		# 	.+ U3/(2*pi) .* chinnery_uyx_tf.(x,p,L,W,q,dip,nu)); # tensile fault
+		#
+		# uyy = ( -U1/(2*pi) .* chinnery_uyy_ss.(x,p,L,W,q,dip,nu) # strike-slip
+		# 		.- U2/(2*pi) .* chinnery_uyy_ds.(x,p,L,W,q,dip,nu) # dip-slip
+		# 		.+ U3/(2*pi) .* chinnery_uyy_tf.(x,p,L,W,q,dip,nu)); # tensile fault
+
+		# Rotation from Okada's axes to geographic
+		# unn = cos(strike) .^ 2 .* uxx .+ sin(2*strike).*(uxy .+ uyx)/2 + sin(strike).^2 .*uyy;
+		# une = sin(2*strike) .* (uxx .- uyy)/2 + sin(strike).^2 .* uyx .- cos(strike).^2 .*uxy;
+		# uen = sin(2*strike) .* (uxx .- uyy)/2 - cos(strike).^2 .* uyx .+ sin(strike).^2 .*uxy;
+		# uee = sin(strike).^2 .* uxx .- sin(2*strike).*(uyx .+ uxy)./2 .+ cos(strike).^2 .*uyy;
+
+
+		return ue, un, uz
+# {ue, un, uz, uze, uzn, unn, une, uen, uee}
+
+
+	end
 	import Test
 
 	function testOkada()
