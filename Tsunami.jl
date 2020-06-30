@@ -71,7 +71,7 @@ module Tsunami
     end
 
     function unrotatexy(x,y,xo,yo,theta)
-        ## Rotate x y coordinate by theta.
+        ## unRotate x y coordinate by theta.
         # theta is in radian following the maths convention
         newx=cos(-1*theta)*(x)-sin(-1*theta)*(y)+xo;
         newy=sin(-1*theta)*(x)+cos(-1*theta)*(y)+yo;
@@ -147,13 +147,23 @@ module Tsunami
         return lonO,rad2deg(latO)
     end
 
+    function moveRef2Centroid!(fault::faultparam)
+        fault.depth=fault.depth+sind(fault.dip)*fault.width;
+        newX=0.5*fault.width
+        newY=0.5*fault.length
+
+        rotX,rotY=rotatexyCompass(newX,newY,0.0,0.0,fault.strike);
+        fault.lon=fault.lon+rotX;
+        fault.lat=fault.lat+rotY;
+        return fault
+    end
 
 
     function mvBLref2centroid!(fault::faultparam)
         # move reference coordinates and depth
         # from bottom left corner (relative to the strike: for stroke of zero it is the south west corner, for stike of 180 it would be the north east corner)
         # to centroid of the fault plane
-        fault.depth=fault.depth+sind(fault.dip)*fault.width;
+        fault.depth=fault.depth+sind(fault.dip)*fault.width.*0.5;
 
         # Moving to the centroid is a simple rotation problem
 
