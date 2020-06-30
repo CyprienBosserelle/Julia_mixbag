@@ -148,7 +148,7 @@ module Tsunami
     end
 
     function moveRef2Centroid!(fault::faultparam)
-        fault.depth=fault.depth+sind(fault.dip)*fault.width;
+        fault.depth=fault.depth+sind(fault.dip)*fault.width.*0.5;
         newX=0.5*fault.width
         newY=0.5*fault.length
 
