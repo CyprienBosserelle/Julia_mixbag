@@ -349,8 +349,8 @@ module Okada
 			.- U2/(2*pi) .* chinnery_uz_ds.(x,p,L,W,q,dip,nu) # dip-slip
 			.+ U3/(2*pi) .* chinnery_uz_tf.(x,p,L,W,q,dip,nu)); # tensile fault
 		# # Rotation from Okada's axes to geographic
-		# ue = sin(strike).*ux .- cos(strike).*uy;
-		# un = cos(strike).*ux .+ sin(strike).*uy;
+		ue = sin(strike).*ux .- cos(strike).*uy;
+		un = cos(strike).*ux .+ sin(strike).*uy;
 		#
 		#
 		# # Tilt
