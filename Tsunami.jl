@@ -8,10 +8,12 @@
 """
 module Tsunami
 
-    import Okada
+    import Okada,NetCDF
     export faultparam,faultkm2m!,rotatexy,unrotatexy,unrotatexyCompass,rotatexyCompass,sphericDist,sphericOffset,mvBLref2centroid!,emptygrid,cartsphdist2eq,cartdistance2eq,CalcMw,Mw2slip,Calcslip!,Okadavert
 
-
+"""
+Fault parameter structure to simplify tsunami generation from earthquake
+"""
     mutable struct faultparam
         lon::Float64
         lat::Float64
@@ -25,9 +27,18 @@ module Tsunami
         tinit::Float64
         trise::Float64
     end
+"""
+Generate tsunami initial wave for a Geographical domain (i.e. )
+"""
+    function InitTsunamiGeo(xx,yy,H,fault::faultparam)
 
-    function Okadavert(ef,nf,fault::faultparam)
-        return Okada.Okada85vert(ef,nf,fault.depth,fault.strike,fault.dip,fault.length,fault.width,fault.rake,fault.slip,0);
+
+        emptygrid(xo,xmax,yo,ymax,inc)
+
+        uX,uY,uZ=Okada.Okada85Dis(ef,nf,fault.depth,fault.strike,fault.dip,fault.length,fault.width,fault.rake,fault.slip,0);
+        dz=uZ+uX*dHdx+uY*dHdy
+
+        return dz
     end
 
     function CalcMw(fault::faultparam)
@@ -186,20 +197,42 @@ module Tsunami
 
     end
 
-    function emptygrid(xo,xmax,yo,ymax,inc)
+    function emptygrid(xx::Vector{Float64},yy::Vector{Float64})
         # porduce arrays of lat,lon/easting,northing representing an empty grid
 
-        x=xo:inc:xmax
-        y=yo:inc:ymax
 
-        xx=collect(x);
-        yy=collect(y);
 
         E=xx*ones(size(yy))'
         N=collect(transpose(yy*ones(size(xx))'))
 
         return E,N
     end
+
+    function emptygrid(x::StepRange,y::StepRange)
+        # porduce arrays of lat,lon/easting,northing representing an empty grid
+
+
+
+        xx=collect(xx);
+        yy=collect(yy);
+
+
+
+        return emptygrid(xx,yy)
+    end
+
+    function emptygrid(xo,xmax,yo,ymax,inc)
+        # porduce arrays of lat,lon/easting,northing representing an empty grid
+
+        x=xo:inc:xmax
+        y=yo:inc:ymax
+
+
+
+        return emptygrid(x,y)
+    end
+
+
 
     function cartdistance2eq(e,n,eqx,eqy)
         de=e-eqx;

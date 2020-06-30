@@ -149,6 +149,10 @@ module Okada
 		"""
 	function Okada85(e,n,depth,strike,dip,L,W,rake,slip,U3)
 
+		if(depth<W*0.5*sind(dip))
+			warn("Depth too shallow! ")
+		end
+
 		strike = strike*pi/180;	# converting STRIKE in radian
 		dip = dip*pi/180;	# converting DIP in radian ('delta' in Okada's equations)
 		rake = rake*pi/180;	#converting RAKE in radian
