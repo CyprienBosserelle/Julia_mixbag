@@ -195,7 +195,7 @@ module junkinthetrunk
         #newx=copy(ttt)
 
 		xA=vec(xA);
-	    yA=vec(yA); 
+	    yA=vec(yA);
 
 
         y = zeros(length(newx))
@@ -288,18 +288,29 @@ module junkinthetrunk
 
         xint=interp1(tmod,xmod,tmea);
 
+		PmO=sum(abs.(xint.-xmea));
+		OmOb=sum(abs.(xmea.-StatsBase.mean(xmea)))
+		Cwcorr=2.0;
+		Wcorr=0.0;
+
+		if(PmO<=(Cwcorr*OmOb))
+			Wcorr=1.0-(PmO/(Cwcorr*OmOb));
+		else
+			Wcorr=((Cwcorr*OmOb)/PmO)-1.0;
+		end
 
         RMS=sqrt(StatsBase.mean((xint.-xmea).^2));
         Bias=StatsBase.mean(xint)-StatsBase.mean(xmea);
-        Wcorr=1-(sum((xmea-xint).^2)/(sum((abs.(xmea.-StatsBase.mean(xint)).+abs.(xint.-StatsBase.mean(xint))).^2)));
-        Bss=1-(StatsBase.var((xmea-xint))/(StatsBase.var((xint.-StatsBase.mean(xint)))));
+        #Wcorr=1-(sum((xmea-xint).^2)/(sum((abs.(xmea.-StatsBase.mean(xint)).+abs.(xint.-StatsBase.mean(xint))).^2)));
+
+		Bss=1-(StatsBase.var((xmea-xint))/(StatsBase.var((xint.-StatsBase.mean(xint)))));
 
         return RMS,Bias,Wcorr,Bss
     end
 
 	"""
         Detrend a serie
-		(Safe-ish with NaN) 
+		(Safe-ish with NaN)
 		usage:
 		y=detrend(x) or y=detrend(x,bp) where bp is idex of breakpoints
 
