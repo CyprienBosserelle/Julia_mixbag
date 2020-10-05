@@ -1,9 +1,11 @@
 module XBGPU
 
     import Printf
-    export writemd
+    export writemd,writedep
 
-    # Function to write md files (next gen?)
+    """
+    Function to write md files ((suitable to use in XBeach_GPU))
+    """
     function writemd(z,dx,nx,ny,grdalpha,filename)
         open(filename,"w") do io
             Printf.@printf(io,"%d\t%d\t%f\t%f\t%f\n",nx,ny,dx,dx,grdalpha);
@@ -23,6 +25,33 @@ module XBGPU
 
             end
 
+        end
+    end
+
+
+    """
+    Function to write .dep files (suitable to use in XBeach)
+    """
+    function writedep(z,dx,filename)
+        nx,ny=size(z)
+        open(filename,"w") do io
+            for jj=1:ny
+                for ii=1:ceil(nx/12)
+                    if ii*12<=nx
+                        for n=1:12
+                            ind=Int64((ii-1)*12+n);
+                            Printf.@printf(io,"%f\t",z[ind,jj]);
+                        end
+                    else
+                        for n=1:(nx-(ii-1)*12)
+                            ind=Int64((ii-1)*12+n);
+                            Printf.@printf(io,"%f\t",z[ind,jj]);
+                        end
+
+                    end
+                    Printf.@printf(io,"\n");
+                end
+            end
         end
     end
 

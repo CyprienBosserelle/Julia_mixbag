@@ -1,7 +1,7 @@
 module CoastWaves
 
 
-    export hs2hrms hrms2hs qkhf OffshoreWaveheight
+    export hs2hrms,hrms2hs,qkhf,OffshoreWaveheight
 
     g=9.81;
 
@@ -77,3 +77,5 @@ module CoastWaves
 
         return Hin./Ks
     end
+
+end
