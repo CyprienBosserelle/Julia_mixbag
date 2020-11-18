@@ -77,7 +77,7 @@ module LiDAR
                 header, points = Readlas(filelst[il]);
             end
 
-            nn,zz=blockcount(p,h,region,res);
+            nn,zz=blockcount(points,header,region,res);
 
             n +=  nn
 
