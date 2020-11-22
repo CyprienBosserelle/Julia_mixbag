@@ -85,11 +85,11 @@ module LiDAR
 
         end
 
-        indxNaN=nn.==0;
-        zz[.!indxNaN] = zz[.!indxNaN] ./ nn[.!indxNaN];
-        zz[indxNaN] .= NaN
+        indxNaN=n.==0;
+        z[.!indxNaN] = z[.!indxNaN] ./ n[.!indxNaN];
+        z[indxNaN] .= NaN
 
-        return xx,yy,zz
+        return xx,yy,z
     end
 
     function Checkregion(region::NTuple{4,AbstractFloat},res::AbstractFloat)
