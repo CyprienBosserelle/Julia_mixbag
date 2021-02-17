@@ -1,7 +1,46 @@
 module XBGPU
 
     import Printf
-    export writemd,writedep
+    export writemd,writedep,curegrid
+
+    """
+    Function to cure the bathy boundary to make it suitable for XBGPU reqirements:
+            1 . uniform offshore boundary (in for 5 cells wide) with smooth transition to real bathymetry (buffersize cell wide)
+            2 . no bathymetry gradient on the top and bottom boundary (10 cell wide)
+            3 . Wall on the land boundary (2 cells wide)
+    """
+    function curegrid(z;buffersize=20)
+        offshorezb=maximum(z[1,:]);
+        nx,ny=size(z);
+        znew = copy(z);
+
+        # Uniform offshore boundary
+        znew[1:5,:] .= offshorezb;
+
+        # smooth transition to real bathy
+
+        for n=1:buffersize
+            znew[5+n,:] = ((offshorezb*(buffersize-n)) .+ (z[5+buffersize,:].*n))./(buffersize*1.0);
+        end
+
+        # Set edges for the side of bnd
+
+        #First the lower side
+        for n=1:9
+            znew[:,n]=z[:,10];
+        end
+        # Now the upper side
+        for n=nx:(nx-9)
+            znew[:,n]=z[:,nx-10];
+        end
+
+        # Also add a trumpian wall on the 2 cell wide side of the land boundary
+        znew[end,:] .= -20.0;
+        znew[end-1,:] .= -20.0;
+
+        return znew
+    end
+
 
     """
     Function to write md files ((suitable to use in XBeach_GPU))
