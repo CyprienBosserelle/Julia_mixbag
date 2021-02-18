@@ -14,6 +14,19 @@ module XBGPU
         nx,ny=size(z);
         znew = copy(z);
 
+        # Set edges for the side of bnd
+
+        #First the lower side
+        for n=1:9
+            znew[:,n]=z[:,10];
+        end
+        # Now the upper side
+        for n=ny:-1:(ny-9)
+            znew[:,n]=z[:,ny-10];
+        end
+
+        z=copy(znew);
+
         # Uniform offshore boundary
         znew[1:5,:] .= offshorezb;
 
@@ -23,16 +36,7 @@ module XBGPU
             znew[5+n,:] = ((offshorezb*(buffersize-n)) .+ (z[5+buffersize,:].*n))./(buffersize*1.0);
         end
 
-        # Set edges for the side of bnd
 
-        #First the lower side
-        for n=1:9
-            znew[:,n]=z[:,10];
-        end
-        # Now the upper side
-        for n=nx:(nx-9)
-            znew[:,n]=z[:,nx-10];
-        end
 
         # Also add a trumpian wall on the 2 cell wide side of the land boundary
         znew[end,:] .= -20.0;
