@@ -5,7 +5,7 @@ Module to read and process LiDAR data
 """
 module LiDAR
 
-    import FileIO, LasIO, junkinthetrunk, LazIO
+    import FileIO, LasIO, junkinthetrunk, LazIO, DEMproc
 
     export Readlas, Rasterise
 
@@ -35,7 +35,7 @@ module LiDAR
         ymax = isnan(region[4]) ? ceil(header.y_max / res) * res : region[4];
 
         region=(xmin,xmax,ymin,ymax);
-        regfilnal=Checkregion(region,res);
+        regfilnal=DEMproc.Checkregion(region,res);
 
         xc,yc,zc=blockmean(points,header,regfilnal,res)
 
@@ -54,9 +54,9 @@ module LiDAR
         ymax = isnan(region[4]) ? ceil(header.y_max / res) * res : region[4];
 
         regf=(xmin,xmax,ymin,ymax);
-        region=Checkregion(region,res);
+        region=DEMproc.Checkregion(region,res);
 
-        nx,ny=Calcnxny(region,res);
+        nx,ny=DEMproc.Calcnxny(region,res);
 
 
         xx=fill(NaN,(nx));
@@ -92,29 +92,7 @@ module LiDAR
         return xx,yy,z
     end
 
-    function Checkregion(region::NTuple{4,AbstractFloat},res::AbstractFloat)
-        xmin=region[1];
-        ymin=region[3];
-        xmax=xmin + ceil((region[2] - xmin) / res) * res;
-        ymax=ymin + ceil((region[4] - ymin) / res) * res;
 
-        regfixed=(xmin,xmax,ymin,ymax)
-        return regfixed
-    end
-
-
-    function Calcnxny(region::NTuple{4,AbstractFloat},res::AbstractFloat)
-
-        xmin=region[1];
-        ymin=region[3];
-        xmax=region[2];
-        ymax=region[4];
-
-        nx=Int((xmax - xmin) / res) + 1
-        ny=Int((ymax - ymin) / res) + 1
-
-        return nx,ny
-    end
 
 
 
@@ -140,7 +118,7 @@ module LiDAR
 
     function blockcount(p::Vector{<:LasIO.LasPoint},h::LasIO.LasHeader,region::NTuple{4,AbstractFloat},res::AbstractFloat)
 
-        nx,ny=Calcnxny(region,res);
+        nx,ny=DEMproc.Calcnxny(region,res);
 
         zz=fill(0.0,(nx,ny));
         nn=fill(0,(nx,ny));
@@ -160,7 +138,7 @@ module LiDAR
 
     function blockmean(p::Vector{<:LasIO.LasPoint},h::LasIO.LasHeader,region::NTuple{4,AbstractFloat},res::AbstractFloat)
 
-        nx,ny=Calcnxny(region,res);
+        nx,ny=DEMproc.Calcnxny(region,res);
 
 
         xx=fill(NaN,(nx));
