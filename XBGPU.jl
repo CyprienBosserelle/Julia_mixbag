@@ -11,6 +11,7 @@ module XBGPU
     """
     function curegrid(z;buffersize=20)
         offshorezb=maximum(z[1,:]);
+        inshorezb=minimum(z[end,:]);
         nx,ny=size(z);
         znew = copy(z);
 
@@ -39,8 +40,8 @@ module XBGPU
 
 
         # Also add a trumpian wall on the 2 cell wide side of the land boundary
-        znew[end,:] .= -20.0;
-        znew[end-1,:] .= -20.0;
+        znew[end,:] .= inshorezb;
+        znew[end-1,:] .= inshorezb;
 
         return znew
     end
