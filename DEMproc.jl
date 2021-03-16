@@ -113,7 +113,7 @@ module DEMproc
         #replace Nans in a grid with values from another grid even if the second grid has a different domain and resolution
 
         Usage:
-        patchgrids(xgridprimary,ygridprimary,zgridprimary,xgridsecondary,ygridsecondary,zgridsecondary)
+        z=patchgrids(xgridprimary,ygridprimary,zgridprimary,xgridsecondary,ygridsecondary,zgridsecondary)
 
     """
     function patchgrids(xgridprimary,ygridprimary,zgridprimary,xgridsecondary,ygridsecondary,zgridsecondary)
@@ -123,7 +123,7 @@ module DEMproc
                 if isnan(zgridprimary[i,j])
                     if (xgridprimary[i]>=xgridsecondary[1]) & (xgridprimary[i]<=xgridsecondary[end]) & (ygridprimary[j]>=ygridsecondary[1]) & (xgridprimary[i]>=xgridsecondary[1]) & (ygridprimary[j]<=ygridsecondary[end])
                         #Interpolate to the nearest values
-                        zgridprimary[i,j]=junkinthetrunk.bilinearinterpUG(xgridsecondary,ygridsecondary,zgridsecondary,xgridprimary[i],ygridprimary[j]);
+                        zgridprimary[i,j]=bilinearinterpUG(xgridsecondary,ygridsecondary,zgridsecondary,xgridprimary[i],ygridprimary[j]);
 
 
                     end
@@ -155,7 +155,7 @@ module DEMproc
 
                     if (xgridprimary[i]>=xgridsecondary[1]) & (xgridprimary[i]<=xgridsecondary[end]) & (ygridprimary[j]>=ygridsecondary[1]) & (xgridprimary[i]>=xgridsecondary[1]) & (ygridprimary[j]<=ygridsecondary[end])
                         #Interpolate to the nearest values
-                        rgedgetopo[j]=junkinthetrunk.bilinearinterpUG(xgridsecondary,ygridsecondary,zgridsecondary,xgridprimary[i],ygridprimary[j]);
+                        rgedgetopo[j]=bilinearinterpUG(xgridsecondary,ygridsecondary,zgridsecondary,xgridprimary[i],ygridprimary[j]);
 
 
                     end
@@ -182,7 +182,7 @@ module DEMproc
 
                     if (xgridprimary[i]>=xgridsecondary[1]) & (xgridprimary[i]<=xgridsecondary[end]) & (ygridprimary[j]>=ygridsecondary[1]) & (xgridprimary[i]>=xgridsecondary[1]) & (ygridprimary[j]<=ygridsecondary[end])
                         #Interpolate to the nearest values
-                        rgedgetopo[i]=junkinthetrunk.bilinearinterpUG(xgridsecondary,ygridsecondary,zgridsecondary,xgridprimary[i],ygridprimary[j]);
+                        rgedgetopo[i]=bilinearinterpUG(xgridsecondary,ygridsecondary,zgridsecondary,xgridprimary[i],ygridprimary[j]);
 
 
                     end
@@ -206,7 +206,7 @@ module DEMproc
 
                     if (xgridprimary[i]>=xgridsecondary[1]) & (xgridprimary[i]<=xgridsecondary[end]) & (ygridprimary[j]>=ygridsecondary[1]) & (xgridprimary[i]>=xgridsecondary[1]) & (ygridprimary[j]<=ygridsecondary[end])
                         #Interpolate to the nearest values
-                        rgedgetopo[j]=junkinthetrunk.bilinearinterpUG(xgridsecondary,ygridsecondary,zgridsecondary,xgridprimary[i],ygridprimary[j]);
+                        rgedgetopo[j]=bilinearinterpUG(xgridsecondary,ygridsecondary,zgridsecondary,xgridprimary[i],ygridprimary[j]);
 
 
                     end
@@ -229,7 +229,7 @@ module DEMproc
 
                     if (xgridprimary[i]>=xgridsecondary[1]) & (xgridprimary[i]<=xgridsecondary[end]) & (ygridprimary[j]>=ygridsecondary[1]) & (xgridprimary[i]>=xgridsecondary[1]) & (ygridprimary[j]<=ygridsecondary[end])
                         #Interpolate to the nearest values
-                        rgedgetopo[i]=junkinthetrunk.bilinearinterpUG(xgridsecondary,ygridsecondary,zgridsecondary,xgridprimary[i],ygridprimary[j]);
+                        rgedgetopo[i]=bilinearinterpUG(xgridsecondary,ygridsecondary,zgridsecondary,xgridprimary[i],ygridprimary[j]);
 
 
                     end
