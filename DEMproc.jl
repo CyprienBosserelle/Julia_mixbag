@@ -3,16 +3,14 @@
     Collection of function to create DEM for flood/inundation simulation
 
     Available functions:
-    SetEdges, patchgrids, Nestedges, Calcnxny, Checkregion, regrid
+    SetEdges, patchgrids, Nestedges, Calcnxny, Checkregion, regrid, getxy
 
-    #Example:
-    using BG
-    SetEdges(x,y,topo,LBRT,buffer)
+
 """
 module DEMproc
 
     import Printf, NetCDF, junkinthetrunk
-    export SetEdges, patchgrids, Nestedges, Calcnxny, Checkregion, regrid, getxy
+    export SetEdges, patchgrids, Nestedges, Calcnxny, Checkregion, Getregion, regrid, getxy
 
     # Function to write md files (next gen?)
     """
@@ -257,9 +255,9 @@ module DEMproc
         dxin=(xin[2]-xin[1]);
 
         if dxin<dxout
-            regrid_coarsen(xin, yin, zin, regionout, dxout)
+            return regrid_coarsen(xin, yin, zin, regionout, dxout)
         else
-            regrid_refine(xin, yin, zin, regionout, dxout)
+            return regrid_refine(xin, yin, zin, regionout, dxout)
         end
     end
 
@@ -348,6 +346,27 @@ module DEMproc
         ny=Int((ymax - ymin) / res) + 1
 
         return nx,ny
+    end
+
+	function Getregion(x,y)
+
+        xmin=minimum(x);
+        ymin=minimum(y);
+        xmax=maximum(x);
+        ymax=maximum(y);
+
+		nx=length(x);
+		ny=length(y);
+
+		res=(xmax - xmin)/(nx-1);
+		regionbeta=(xmin,xmax,ymin,ymax);
+
+		region=Checkregion(regionbeta,res);
+
+        # nx=Int((xmax - xmin) / res) + 1
+        # ny=Int((ymax - ymin) / res) + 1
+
+        return region,res
     end
 
     function bilinearinterpBase(q11,q12,q21,q22,x1,x2,y1,y2,x,y)
