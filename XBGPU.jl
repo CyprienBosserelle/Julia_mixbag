@@ -61,7 +61,7 @@ module XBGPU
 
 
                 if mod(nx,11)!=0
-                    for ii=(floor(nx/11)*11+1):(floor(nx/11)*11+(nx/11-floor(nx/11))*11)
+                    for ii=convert(Int64, round((floor(nx/11)*11+1), digits=0)):convert(Int64, round((floor(nx/11)*11+(nx/11-floor(nx/11))*11),digits=0))
                         Printf.@printf(io,"%f\t",z[Int64(ii),jj])
                     end
                     Printf.@printf(io,"\n");
@@ -71,7 +71,7 @@ module XBGPU
 
         end
     end
-
+    
 
     """
     Function to write .dep files (suitable to use in XBeach)
