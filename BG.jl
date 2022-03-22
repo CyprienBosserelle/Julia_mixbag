@@ -84,7 +84,7 @@ module BG
         end
     end
 
-    function plotvar(file,var,step,figname;region=(NaN,NaN,NaN,NaN),zrange=(NaN,NaN), plotblock=true, plotid=false)
+    function plotvar(file,var,step,figname;region=(NaN,NaN,NaN,NaN),zrange=(NaN,NaN), plotblock=true, plotid=false, cpt=:jet, colorunit=:m)
         #
 
         levmax=NetCDF.ncgetatt(file, "Global", "maxlevel");
@@ -109,7 +109,7 @@ module BG
 
         #regplot=(xmin,xmax,ymin,ymax)
 
-        topo = GMT.makecpt(color=:jet, range=(zmin,zmax), continuous=true)
+        topo = GMT.makecpt(color=cpt, range=(zmin,zmax), continuous=true)
         GMT.basemap(proj=:linear, region=(xmin,xmax,ymin,ymax), frame=(annot=:auto, ticks=:auto))
         #basemap(proj=:linear, figsize=(24.5,1.0), region=(xmin,xmax,ymin,ymax))
         for level=levmin:levmax
@@ -128,7 +128,7 @@ module BG
 
 
         GMT.colorbar!(pos=(anchor=:TC,length=(15.5,0.6), horizontal=true, offset=(0,1.0)),
-                  color=topo, frame=(ylabel=:m,),savefig=figname*".png" , fmt=:png, show=true)
+                  color=topo, frame=(annot=:auto,ylabel=colorunit,),nolines=true,savefig=figname*".png" , fmt=:png, show=true)
 
 
 
