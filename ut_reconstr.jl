@@ -485,7 +485,7 @@ export coef_s,opt_s,makelind,ut_reconstr1,Predicttidetime,Readharmonicsnc,exceed
 
     end
 
-    function exceedencecurve(coef,opt,nyear)
+    function exceedencecurve(coef,opt;nyear=18)
         # Calculate 100-year tidal exceedence curve for High tide and low tide based on tide constituents
         # return 2 vector of tidal exceedance for every percentile with 0:1:100
         # WARNING this analysis may take a while
@@ -527,9 +527,7 @@ export coef_s,opt_s,makelind,ut_reconstr1,Predicttidetime,Readharmonicsnc,exceed
 
         return HTexcurve,LTexcurve;
     end
-    function exceedencecurve(coef,opt)
-        return exceedencecurve(coef,opt,18);
-    end
+
 
 
 
