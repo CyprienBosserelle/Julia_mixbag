@@ -1,5 +1,5 @@
 module ut_reconstr
-import Dates, DelimitedFiles, NetCDF, Statistics, ProgressMeter
+import Dates, DelimitedFiles, NetCDF, Statistics
 export coef_s,opt_s,makelind,ut_reconstr1,Predicttidetime,Readharmonicsnc,exceedencecurve
 
     struct shallow_s
@@ -500,7 +500,7 @@ export coef_s,opt_s,makelind,ut_reconstr1,Predicttidetime,Readharmonicsnc,exceed
         HTexcurve=zeros(101);
         LTexcurve=zeros(101);
 
-        ProgressMeter.@showprogress 1 "Calculating tide exceedance..." for year=2000:(2000+nyear)
+        for year=2000:(2000+nyear)
              t=[Dates.DateTime(year,01,01,0,0,0) Dates.DateTime(year,12,31,23,59,59)];
 
              HT,Hlev,LT,Llev=Predicttidetime(t,coef,opt);
