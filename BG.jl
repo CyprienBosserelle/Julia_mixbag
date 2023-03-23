@@ -11,7 +11,7 @@
 """
 module BG
 
-    import Printf, NetCDF, junkinthetrunk, GMT
+    import Printf, NetCDF, junkinthetrunk, GMT,DEMproc
     export CalcRunup, plotvar
 
 
@@ -63,6 +63,73 @@ module BG
 
         return zmin,zmax
     end
+
+    function readBGvarlevel(file,fvar,stp)
+
+
+        scalefac=NetCDF.ncgetatt(file, fvar, "scale_factor");
+        addoffset=NetCDF.ncgetatt(file, fvar, "add_offset");
+        missval=NetCDF.ncgetatt(file, fvar, "_FillValue");
+
+
+
+        zz=dropdims(NetCDF.ncread(file,fvar,[1,1,max(stp,1)], [-1,-1,1]),dims=3);
+
+        if any([!isnothing(scalefac) !isnothing(addoffset)])
+            zz=zz.*scalefac.+addoffset;
+        end
+        zz[zz.==missval].=NaN;
+
+
+        return zz
+    end
+
+    function readBGxy(file::String,level::Integer)
+
+        if level<0
+            stlv="N";
+        else
+            stlv="P";
+        end
+
+        xvar="xx_"*stlv*string(abs(level))
+        yvar="yy_"*stlv*string(abs(level))
+        xx=NetCDF.ncread(file,xvar,[1], [-1]);
+        yy=NetCDF.ncread(file,yvar,[1], [-1]);
+        return xx,yy
+    end
+
+
+    function readBGvar(file::String,var::String,step::Int)
+        levmax=NetCDF.ncgetatt(file, "Global", "maxlevel");
+        levmin=NetCDF.ncgetatt(file, "Global", "minlevel");
+
+        zBG=Vector{Array{AbstractFloat,2}}(undef,(levmax-levmin+1))
+        xBG=Vector{Array{AbstractFloat,1}}(undef,(levmax-levmin+1))
+        yBG=Vector{Array{AbstractFloat,1}}(undef,(levmax-levmin+1))
+
+        levels=levmin:levmax
+
+        for level=levmin:levmax
+
+            if level<0
+                stlv="N";
+            else
+                stlv="P";
+            end
+
+            varstr=var*"_"*stlv*string(abs(level))
+
+            indxlev=level-levmin+1
+
+            zBG[indxlev]=readBGvarlevel(file,varstr,step);
+            xBG[indxlev],yBG[indxlev]=readBGxy(file,level)
+        end
+        return levels,xBG,yBG,zBG
+    end
+
+
+
 
     function plotblocks(file,var,step; showid=false)
 
@@ -138,32 +205,59 @@ module BG
 
 
     """
-    ttt
+    Calculate runup based on hmax and zsmax:
+    runup=zsmax[hmax>mindepth]
+
     """
-    function CalcRunup(file)
-        ncfile=NetCDF.open(file);
+    function CalcRunup(hmax,zmax;mindepth=0.01)
+        zmax[hmax.>mindepth].=NaN;
 
-
-        fvar="zsmax"
-
-
-
-
-        scalefac=NetCDF.ncgetatt(file, fvar, "scale_factor");
-        addoffset=NetCDF.ncgetatt(file, fvar, "add_offset");
-        missval=NetCDF.ncgetatt(file, fvar, "_FillValue");
-
-
-
-        zz=NetCDF.ncread(file,fvar,[1,1,max(stp,1)], [-1,-1,1]);
-        if any([!isnothing(scalefac) !isnothing(addoffset)])
-            zz=zz.*scalefac.+addoffset;
-        end
-        zz[zz.==missval].=NaN;
-
-        zz=zz[.!isnan.(zz)];
+        return zmax
         #
     end
 
+    function CalcRunup(file::String, region::NTuple{4,AbstractFloat}, dx::AbstractFloat)
+
+        time=NetCDF.ncread(file,"time",[1], [-1]);
+        levelall,x,y,zsmax=readBGvar(file,"zsmax",length(time))
+        levelall,x,y,hmax=readBGvar(file,"hmax",length(time))
+
+        levmin=minimum(levelall)
+
+        runup=Vector{Array{AbstractFloat,2}}(undef,length(levelall))
+
+        for level=levelall
+
+            indxlev=level-levmin+1
+
+            runup[indxlev]=CalcRunup(hmax[indxlev],zsmax[indxlev])
+        end
+
+        regfix=DEMproc.Checkregion(region,dx);
+
+        xout,yout=DEMproc.getxy(regfix,dx);
+
+        nxout,nyout=DEMproc.Calcnxny(regfix,dx);
+
+        runupout=zeros(nxout,nyout).*NaN
+
+        for level=levelall
+
+            indxlev=level-levmin+1
+            ztmp=DEMproc.regrid(x[indxlev], y[indxlev], runup[indxlev], regfix, dx)
+            CIwant=(isnan.(runupout)) .& (.!isnan.(ztmp))
+            runupout[CIwant]=ztmp[CIwant]
+        end
+
+        # add intersection to topo?
+
+        # New output file name
+        flstv=replace(file,".nc" => "_runup.nc")
+
+
+        junkinthetrunk.write2nc(xout,yout, runupout, flstv)
+
+
+    end
 
 end
