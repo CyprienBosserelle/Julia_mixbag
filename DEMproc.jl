@@ -333,7 +333,9 @@ module DEMproc
         regfixed=(xmin,xmax,ymin,ymax)
         return regfixed
     end
-
+	function ftoi(a)
+		return floor(Int,a+0.5)
+	end
 
     function Calcnxny(region::NTuple{4,AbstractFloat},res::AbstractFloat)
 
@@ -342,8 +344,8 @@ module DEMproc
         xmax=region[2];
         ymax=region[4];
 
-        nx=Int((xmax - xmin) / res) + 1
-        ny=Int((ymax - ymin) / res) + 1
+        nx=ftoi((xmax - xmin) / res) + 1
+        ny=ftoi((ymax - ymin) / res) + 1
 
         return nx,ny
     end
