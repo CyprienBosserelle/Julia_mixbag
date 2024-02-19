@@ -55,7 +55,7 @@ module CoastWaves
         return kh;
     end
 
-    function Shoalcoeff(H,T,h)
+    function Shoalcoeff(H,Tp,h)
         #Calculate wave length and wave celerity
         sig=2.0*pi./Tp
         kh = qkhfs(sig, h);

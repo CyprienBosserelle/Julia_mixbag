@@ -151,6 +151,34 @@ module BG
         end
     end
 
+    function makeblocksGMT(file,var,step,outfile)
+        #
+        blkxo = NetCDF.ncread(file, "blockxo")
+        blkyo = NetCDF.ncread(file, "blockyo")
+        blkwidth= NetCDF.ncread(file, "blockwidth") .*16.0;
+        dx=NetCDF.ncread(file, "blockwidth");
+
+
+        nblk=length(blkxo);
+
+
+        open(outfile,"w") do io
+
+            Printf.@printf(io,">>\n");
+
+
+            for ib=1:nblk
+                rect = [blkxo[ib].-dx[ib]*0.5 blkyo[ib].-dx[ib]*0.5; blkxo[ib]+blkwidth[ib].-dx[ib]*0.5 blkyo[ib].-dx[ib]*0.5; blkxo[ib]+blkwidth[ib].-dx[ib]*0.5 blkyo[ib]+blkwidth[ib].-dx[ib]*0.5; blkxo[ib].-dx[ib]*0.5 blkyo[ib]+blkwidth[ib].-dx[ib]*0.5; blkxo[ib].-dx[ib]*0.5 blkyo[ib].-dx[ib]*0.5];
+                
+                Printf.@printf(io,"%f\t%f\n%f\t%f\n%f\t%f\n%f\t%f\n%f\t%f\n>>\n",blkxo[ib].-dx[ib]*0.5, blkyo[ib].-dx[ib]*0.5,blkxo[ib]+blkwidth[ib].-dx[ib]*0.5, blkyo[ib].-dx[ib]*0.5,blkxo[ib]+blkwidth[ib].-dx[ib]*0.5, blkyo[ib]+blkwidth[ib].-dx[ib]*0.5, blkxo[ib].-dx[ib]*0.5, blkyo[ib]+blkwidth[ib].-dx[ib]*0.5,blkxo[ib].-dx[ib]*0.5,blkyo[ib].-dx[ib]*0.5)
+                
+            end
+        end
+
+
+    end
+
+
     function plotvar(file,var,step,figname;region=(NaN,NaN,NaN,NaN),zrange=(NaN,NaN), plotblock=true, plotid=false, cpt=:jet, colorunit=:m)
         #
 
