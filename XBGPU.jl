@@ -9,8 +9,12 @@ module XBGPU
             2 . no bathymetry gradient on the top and bottom boundary (10 cell wide)
             3 . Wall on the land boundary (2 cells wide)
     """
-    function curegrid(z;buffersize=20)
-        offshorezb=maximum(z[1,:]);
+    function curegrid(z;buffersize=20,offshorezs=NaN)
+
+        if isnan(offshorezs)
+            offshorezb=maximum(z[1,:]);
+        end
+
         inshorezb=minimum(z[end,:]);
         nx,ny=size(z);
         znew = copy(z);

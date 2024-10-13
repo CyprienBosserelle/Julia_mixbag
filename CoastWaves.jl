@@ -55,17 +55,10 @@ module CoastWaves
         return kh;
     end
 
-    """
-        Hoff=OffshoreWaveheight(Hin,Tp,h)
-    Calculate offshore wave height [Hoff] based on wave height [Hin] at depth [h]
-    for waves of period [Tp]
-    Hin, Hoff, h are in [m] and Tp in [s].
-    This uses the linear wave theory.
-    """
-    function OffshoreWaveheight(Hin,Tp,h)
+    function Shoalcoeff(H,Tp,h)
         #Calculate wave length and wave celerity
         sig=2.0*pi./Tp
-        kh = qkhfs( sig, h );
+        kh = qkhfs(sig, h);
         L=2*pi./(kh./h);
         C=L./Tp;
         # offshore group velocity
@@ -75,7 +68,78 @@ module CoastWaves
         # shoaling coeff
         Ks=sqrt.(Cgo ./ Cg)
 
+        return Ks
+    end
+
+    """
+        Hoff=OffshoreWaveheight(Hin,Tp,h)
+    Calculate offshore wave height [Hoff] based on wave height [Hin] at depth [h]
+    for waves of period [Tp]
+    Hin, Hoff, h are in [m] and Tp in [s].
+    This uses the linear wave theory.
+    """
+    function OffshoreWaveheight(Hin,Tp,h)
+       
+        # shoaling coeff
+        Ks=Shoalcoeff(Hin,Tp,h)
+
         return Hin./Ks
     end
+
+    """
+    Sd,Sp,Rp,Sm=Wsetup(Hs,T,D,slp)
+    This function calculate the wave set down(Sd) wave set up (Sp) wave run up
+    (Rp) and the distance of the inundation (Sm) for a given wave height(Hs),
+    Period (T) at a given depth (D) and a given beach slope(slp(e.g.: slp=1/30)).
+    Wave set-up and Run-up calculated using CEM (Weggel, longuet-Higgins)
+    The program calculate the beaking height and depth for each wave using
+    linear wave theory.
+    Matlab transcripted by    Cyprien Bosserelle 22/05/2008
+    Julia translation CB 24/03/2023
+    """
+    function Wsetup(Hs,Tp,h,slp)
+        Hrms=hs2hrms(Hs)
+
+        Ho=OffshoreWaveheight(Hrms,Tp,h)
+
+        hh=20:-0.01:0.01;
+        KSall=Shoalcoeff.(Ho,Tp,hh)
+
+        Hin=Ho.*KSall;
+        gamo=Hin./hh;
+
+        a=43.8*(1-exp(-19*slp));
+        b=1.56/(1+exp(-19.5*slp));
+
+        gam1=b.-a.*Hin./(g*Tp^2);
+
+        indmin=argmin(abs.(gamo.-gam1));
+
+        Hb=Hin[indmin];
+        hb=hh[indmin];
+
+        kb=qkhfs( 2.0*pi./Tp, hb )
+
+        gam=Hb/hb;
+
+        Sd=(-1/8)*Hb^2*(kb)/(sinh(2*kb*hb));
+        Sp=Sd+(1/(1+8/(3*gam^2)))*(hb-Sd);
+        nn=1/(1+8/(3*gam^2))*slp;
+        Rp=Sp/(slp-nn);
+        Sm=Sp+nn*Rp;
+
+        return Sd,Sp,Rp,Sm
+    end
+
+
+    function Stockdon2006(Hs,Tp,h,slp)
+        sig=2.0*pi./Tp
+        kh = qkhfs(sig, h);
+        Lp=2*pi./(kh./h);
+        Sp=0.35*slp*sqrt(Hs*Lp)
+        return Sp
+    end
+
+
 
 end

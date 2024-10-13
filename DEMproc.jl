@@ -9,8 +9,36 @@
 """
 module DEMproc
 
-    import Printf, NetCDF, junkinthetrunk
+    import Printf, NetCDF
     export SetEdges, patchgrids, Nestedges, Calcnxny, Checkregion, Getregion, regrid, getxy
+
+     #nanmean does a mean while ignoring nans
+	"""
+    average of a vector ignoring NaNs
+    usage nanmean(x)
+"""
+    nanmean(x) = StatsBase.mean(filter(!isnan,x))
+    nanmean(x,y) = mapslices(nanmean,x,y)
+
+     #write2nc writes a matrix to netcdf file
+     function write2nc(x,y,z,ncfile,varnames)
+
+        xatts = Dict("longname" => "eastings",
+          "units"    => "m")
+        yatts = Dict("longname" => "northings",
+                  "units"    => "m")
+        varatts = Dict("longname" => "Topo / Bathy above MVD53",
+                  "units"    => "m")
+        NetCDF.nccreate(ncfile,varnames[3],varnames[1],x,xatts,varnames[2],y,yatts,atts=varatts)
+        NetCDF.ncwrite(x,ncfile,varnames[1]);
+        NetCDF.ncwrite(y,ncfile,varnames[2]);
+        NetCDF.ncwrite(z,ncfile,varnames[3]);
+        NetCDF.ncclose(ncfile);
+    end
+	function write2nc(x,y,z,ncfile)
+		varnames=["x","y","z"];
+		write2nc(x,y,z,ncfile,varnames)
+	end
 
     # Function to write md files (next gen?)
     """
@@ -301,7 +329,7 @@ module DEMproc
                 ii=(xin .> (x - 0.5*dxout)) .& (xin .<= ( x + 0.5*dxout ));
                 jj=(yin .> (y - 0.5*dxout)) .& (yin .<= ( y + 0.5*dxout ));
 
-                z[i,j]= junkinthetrunk.nanmean(zin[ii,jj]);
+                z[i,j]= nanmean(zin[ii,jj]);
             end
         end
 
@@ -334,7 +362,9 @@ module DEMproc
         regfixed=(xmin,xmax,ymin,ymax)
         return regfixed
     end
-
+	function ftoi(a)
+		return floor(Int,a+0.5)
+	end
 
     function Calcnxny(region::NTuple{4,AbstractFloat},res::AbstractFloat)
 
@@ -343,8 +373,10 @@ module DEMproc
         xmax=region[2];
         ymax=region[4];
 
-        nx=Int(floor((xmax - xmin) / res)) + 1
-        ny=Int(floor((ymax - ymin) / res)) + 1
+
+        nx=ftoi((xmax - xmin) / res) + 1
+        ny=ftoi((ymax - ymin) / res) + 1
+
 
         return nx,ny
     end
