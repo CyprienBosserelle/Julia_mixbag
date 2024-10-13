@@ -46,6 +46,51 @@ module XBGPU
         return znew
     end
 
+    """
+    """
+    function readmd(filename::String)
+        #read header
+        
+        #read md bathymety file
+        #[depth nx ny dx dy sst]=readmd(filename)
+
+        open("/usr/share/dict/words") do io
+            readline(io)
+            
+
+
+
+
+
+
+            readlines(io)
+        end
+            
+        #fid=fopen(filename);
+            s=fgets(fid);
+            A=textscan(s,'%f %f %f %f %s');
+            nx=A{1};
+            ny=A{2};
+            dx=A{3};
+            dy=A{4};
+            sst=A{5};
+            depth=zeros(nx,ny);
+            for yy=1:ny
+                s=fgets(fid);
+                j=str2num(s);
+                B=fscanf(fid,'%f',nx);
+                depth(:,j)=B;
+                s=fgets(fid);
+            end
+            fclose(fid);
+            
+            pcolor(depth'); shading flat; axis image
+            
+            % depth(1:27,216:240)=-9;
+
+        return x,y,z
+    end
+
 
     """
     Function to write md files ((suitable to use in XBeach_GPU))
