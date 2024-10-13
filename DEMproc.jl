@@ -247,6 +247,7 @@ module DEMproc
     end
     """
     Regrid a cartesian grid to another location/resolution
+	usage: regrid(xin, yin, zin, regionout::NTuple{4,AbstractFloat}, dxout::AbstractFloat)
     """
     function regrid(xin, yin, zin, regionout::NTuple{4,AbstractFloat}, dxout::AbstractFloat)
         #
@@ -342,8 +343,8 @@ module DEMproc
         xmax=region[2];
         ymax=region[4];
 
-        nx=Int((xmax - xmin) / res) + 1
-        ny=Int((ymax - ymin) / res) + 1
+        nx=Int(floor((xmax - xmin) / res)) + 1
+        ny=Int(floor((ymax - ymin) / res)) + 1
 
         return nx,ny
     end
